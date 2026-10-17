@@ -1,2 +1,4 @@
-# 本次验证的版本；升级后请重新运行 tests。
-streamlit==1.65.0
+# Vercel / FastAPI 云端运行依赖；本地 Streamlit 请安装 requirements-local.txt。
+fastapi==0.143.3
+psycopg[binary]==3.3.6
+uvicorn==0.54.0

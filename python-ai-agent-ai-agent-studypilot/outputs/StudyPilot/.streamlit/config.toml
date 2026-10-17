@@ -1,0 +1,18 @@
+# Only loopback app origins can send the native per-browser theme message.
+# If running on a different port, add that exact local origin here.
+[browser]
+gatherUsageStats = false
+
+[server]
+address = "127.0.0.1"
+headless = true
+
+[client]
+allowedOrigins = ["http://127.0.0.1:8501", "http://localhost:8501", "http://127.0.0.1:8502", "http://localhost:8502"]
+
+[theme]
+base = "light"
+primaryColor = "#b74731"
+backgroundColor = "#f8f6f0"
+secondaryBackgroundColor = "#f0ede5"
+textColor = "#262520"

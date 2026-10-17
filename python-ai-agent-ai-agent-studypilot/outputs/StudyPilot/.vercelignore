@@ -1,0 +1,12 @@
+data
+.venv
+venv
+__pycache__
+tests
+*.db
+*.db-*
+*.log
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml

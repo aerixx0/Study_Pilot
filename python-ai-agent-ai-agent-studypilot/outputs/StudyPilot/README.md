@@ -1,6 +1,8 @@
 # StudyPilot 📚
 
-一个逐步构建的开源教育 AI Agent 项目。**当前发布 v0.4.0：OpenAI 工具调用循环、只读查询、修改提案与用户确认执行。** 保留账号隔离、规则排课、亮色／深色与界面动效。
+一个逐步构建的开源教育 AI Agent 项目。**当前发布 v0.5.0：新增 Vercel Web 入口和 PostgreSQL 云端持久化。** 保留本地 Streamlit 版、账号隔离、规则排课、亮色／深色和第三阶段的 OpenAI 工具循环、只读查询、修改提案与用户确认执行。
+
+部署到 Vercel 请先看 [DEPLOYMENT.md](DEPLOYMENT.md)：根目录为 python-ai-agent-ai-agent-studypilot/outputs/StudyPilot，使用 FastAPI 入口与 PostgreSQL。原 app.py 是本地 Streamlit 界面，不是 Vercel 函数入口。云端不会自动上传或迁移本地账号数据。
 
 v0.1.1 重新设计了界面：参考 [Offmap](https://www.offmap-x.ai/) 的大标题与分区思路，采用暖白纸张底色、珊瑚色重点、横向导航和原创 SVG 学习插画。首页新增可用学习日展示，以及直接进入任务和档案的快捷按钮。原来的 SQLite 数据无需迁移，读写确认逻辑保留。字体和图片均使用本地资源，不依赖外部字体服务。
 
@@ -46,7 +48,7 @@ v0.1.1 重新设计了界面：参考 [Offmap](https://www.offmap-x.ai/) 的大�
 cd "C:\你的目录\StudyPilot"
 py --version
 py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-local.txt
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
@@ -225,7 +227,7 @@ $env:STUDYPILOT_AUTH_DIR = "C:\你的目录\StudyPilot-data\accounts"
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-测试使用临时目录和临时数据库，**不会读写你的实际学习数据库**。包含真实数据库持久化、校验、确认拦截、冲突、删除后的历史、周边界，以及 Streamlit 表单从点击到数据库的完整路径。无需另装 pytest。
+测试使用临时目录和临时数据库，**不会读写你的实际学习数据库**。包含真实数据库持久化、校验、确认拦截、冲突、删除后的历史、周边界，以及 Streamlit 表单和 Web HTTP API 的完整路径。先安装 requirements-dev.txt，无需另装 pytest；PostgreSQL 测试的独立配置见 DEPLOYMENT.md。
 
 只运行数据库和统计测试（不需要 Streamlit）：
 

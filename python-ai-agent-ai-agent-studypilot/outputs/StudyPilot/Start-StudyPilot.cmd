@@ -16,14 +16,14 @@ if errorlevel 1 (
     py -3 -m venv .venv
 )
 if errorlevel 1 goto failed
-"%STUDYPILOT_PYTHON%" -m pip install -r requirements.txt
+"%STUDYPILOT_PYTHON%" -m pip install -r requirements-local.txt
 if errorlevel 1 goto failed
 :run
 "%STUDYPILOT_PYTHON%" -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
 if errorlevel 1 goto failed
 "%STUDYPILOT_PYTHON%" -c "import streamlit" >nul 2>nul
 if not errorlevel 1 goto launch
-"%STUDYPILOT_PYTHON%" -m pip install -r requirements.txt
+"%STUDYPILOT_PYTHON%" -m pip install -r requirements-local.txt
 if errorlevel 1 goto failed
 :launch
 "%STUDYPILOT_PYTHON%" start_studypilot.py
