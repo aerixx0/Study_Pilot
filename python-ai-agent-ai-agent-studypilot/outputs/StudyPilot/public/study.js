@@ -1,7 +1,7 @@
 "use strict";
 const $ = (q, root=document) => root.querySelector(q);
 const E = v => String(v ?? "").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let me=null, data=null, page="overview", authPage="login", recoveryCode="", history=[], preview=null, trace=[], sessions=[], authEpoch=0;
+let me=null, data=null, page="overview", authPage="login", recoveryCode="", history=[], preview=null, trace=[], sessions=[], authEpoch=0, accountServiceReady=true;
 const drafts=new Map();
 const names={overview:"学习概览",profile:"学习档案",tasks:"学习任务",plan:"学习计划",records:"学习记录",account:"账号设置",assistant:"AI 助手",development:"开发进度"};
 const labels={title:"任务标题",subject:"科目",due_date:"截止日期",estimated_minutes:"预计分钟",priority:"优先级",status:"状态",requires_computer:"需要电脑",notes:"备注",goals:"学习目标",weekly_hours:"每周小时",speed:"学习速度",preference:"学习偏好",max_session_minutes:"单次时长上限",levels:"各科基础",priorities:"科目优先级",availability:"每天时间和设备",study_date:"实际日期",duration:"实际分钟",note:"备注",minutes:"分钟",devices:"设备"};
@@ -77,7 +77,7 @@ function login(){
   let fields=input("username","用户名","","text",'autocomplete="username" maxlength="64" required');
   if(authPage==="recover")fields+=input("recovery_code","恢复码","","password",'autocomplete="off" required')+input("new_password","新密码","","password",'autocomplete="new-password" maxlength="128" required')+input("password_again","再次输入新密码","","password",'autocomplete="new-password" required')+confirm("我确认重置密码，并让旧会话退出");
   else fields+=input("password","密码","","password",'autocomplete="'+(authPage==="login"?"current-password":"new-password")+'" maxlength="128" required')+(authPage==="register"?input("password_again","再次输入密码","","password",'autocomplete="new-password" required')+confirm("我确认创建自己的账号"):"");
-  return '<div class="auth">'+head("HELLO / YOUR OWN LEARNING SPACE","为你的学习，留一个位置","登录自己的账号，让目标和每一步努力都有归处。")+tabs+'<form id="auth-'+authPage+'" class="card" data-kind="'+authPage+'">'+fields+submit(authPage==="login"?"登录":authPage==="register"?"创建账号":"重置密码")+'</form><small>用户名支持中文与常用符号，1–64 字；密码为 15–128 字。提交失败会保留填写内容。会话最长 12 小时，30 分钟无操作过期。</small></div>';
+  return '<div class="auth">'+head("HELLO / YOUR OWN LEARNING SPACE","为你的学习，留一个位置","登录自己的账号，让目标和每一步努力都有归处。")+(!accountServiceReady?'<div class="info">网页已上线，账号服务仍在准备中。数据库连接完成后，即可注册、登录并保存学习数据。</div>':"")+tabs+'<form id="auth-'+authPage+'" class="card" data-kind="'+authPage+'"><fieldset'+(accountServiceReady?"":" disabled")+'>'+fields+submit(authPage==="login"?"登录":authPage==="register"?"创建账号":"重置密码")+'</fieldset></form><small>用户名支持中文与常用符号，1–64 字；密码为 15–128 字。提交失败会保留填写内容。会话最长 12 小时，30 分钟无操作过期。</small></div>';
 }
 function recovery(){return '<div class="auth">'+head("KEEP IT SAFE","请保存你的恢复码","恢复码只显示这一次；丢失密码时可用于重置。")+'<div class="card"><p class="recovery">'+E(recoveryCode)+'</p><small>不要发给其他人。恢复码更新后旧码失效。</small><div class="actions"><button class="btn primary" data-action="saved-recovery">我已妥善保存，去登录</button></div></div></div>';}
 function overview(){
@@ -194,7 +194,7 @@ document.addEventListener("click",async event=>{
   }catch(error){notice(error.message,"error");button.disabled=false;}
 });
 async function boot(){
-  try{me=await api("/me");await refresh();render();}
+  try{const health=await api("/health");accountServiceReady=health.database_configured;if(!accountServiceReady){render();return;}me=await api("/me");await refresh();render();}
   catch(error){clearPrivate();render();if(!/登录已失效/.test(error.message))notice(error.message,"error");}
 }
 boot();
