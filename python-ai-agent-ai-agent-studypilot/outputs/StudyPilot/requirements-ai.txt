@@ -1,0 +1,2 @@
+# 第三阶段使用 Python 标准库 HTTPS 调用 OpenAI Responses API。
+# 无额外 AI 依赖；安装 requirements.txt 即可。保留此文件兼容旧说明。

@@ -1,0 +1,270 @@
+/* 配色和排版都集中在这里；先学改这几个变量即可调整整个界面。 */
+:root {
+  --paper: #f8f6f0;
+  --ink: #262520;
+  --muted: #706d63;
+  --accent: #df6045;
+  --line: #ddd9cf;
+  --peach: #f4e3da;
+  --surface: #fcfaf5;
+  --soft: #f4f1e9;
+  --goal: #f1ece1;
+  --label: #57544b;
+  --selected-ink: #943d29;
+  --selected-line: #e8bead;
+  --hover: #f3eade;
+  --shadow: #2625200a;
+  --focus: #df604533;
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --ease-spring: cubic-bezier(.16,1,.3,1);
+  --motion-fast: 180ms;
+  --motion-normal: 320ms;
+}
+:root[data-pilot-theme="dark"] {
+  --paper: #191c20;
+  --ink: #f0ede5;
+  --muted: #b6b5af;
+  --accent: #f28a70;
+  --line: #454b54;
+  --peach: #3c2d29;
+  --surface: #21252a;
+  --soft: #23272c;
+  --goal: #2a2926;
+  --label: #d2cfc6;
+  --selected-ink: #ffc0aa;
+  --selected-line: #8c594c;
+  --hover: #303138;
+  --shadow: #00000033;
+  --focus: #f28a7040;
+}
+.stApp {background:var(--paper); color:var(--ink);}
+html,body,.stApp,input,textarea,button {font-family:"Segoe UI","Microsoft YaHei",sans-serif;}
+[data-testid="stAppViewContainer"] {background:var(--paper);}
+.block-container {max-width:1240px; padding:1.8rem 3.5rem 2rem;}
+[data-testid="stHeader"] {background:transparent; height:0;}
+[data-testid="stToolbar"], #MainMenu, [data-testid="stDecoration"] {display:none;}
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {gap:1.2rem;}
+.masthead {display:flex; align-items:center; justify-content:space-between; padding:12px 0 22px; border-bottom:1px solid var(--line);}
+.wordmark {font-family:Georgia,"Times New Roman",serif; font-size:32px; font-weight:700; letter-spacing:-1.5px; display:flex; align-items:center;}
+.brand-mark {font-family:Arial,sans-serif; display:inline-flex; width:30px; height:30px; border:1.5px solid var(--ink); align-items:center; justify-content:center; margin-right:10px; font-size:25px; border-radius:50%; transform:rotate(-8deg);}
+.wordmark-dot,.accent-dot {color:var(--accent);}
+.masthead-meta {display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); letter-spacing:1px;}
+.live-dot {width:6px; height:6px; background:#719582; border-radius:50%;}
+.edition {margin-left:20px; font-family:Consolas,monospace; font-size:11px;}
+.masthead-tools {display:flex; align-items:center; gap:24px;}
+.theme-picker {display:flex; gap:4px; padding:4px; border:1px solid var(--line); border-radius:24px; background:var(--surface);}
+.theme-picker button {display:grid; place-items:center; padding:0; width:36px; height:36px; border:0; border-radius:50%; color:var(--muted); background:transparent; cursor:pointer; transition:background 240ms var(--ease-out),color 240ms,transform 240ms var(--ease-out),box-shadow 240ms;}
+.theme-picker button svg {width:20px; height:20px; transition:transform 280ms var(--ease-out);}
+.theme-picker button[aria-pressed="true"] {color:var(--selected-ink); background:var(--peach); box-shadow:0 2px 5px var(--shadow);}
+.theme-picker button:focus-visible {outline:2px solid var(--accent); outline-offset:3px;}
+.theme-picker button:active {transform:scale(.93);}
+.theme-picker button[aria-pressed="true"] svg {transform:rotate(10deg);}
+/* Color transitions retain layout and input focus, including native portal content. */
+.stApp,[data-testid="stAppViewContainer"],.masthead,.theme-picker,
+.st-key-top-navigation,[data-testid="stForm"],.day-cell,.empty-state,.goal-sheet,
+[data-testid="stExpander"],[data-testid="stAlert"],
+[data-baseweb="input"],[data-baseweb="base-input"],textarea,
+[data-baseweb="popover"],[data-baseweb="menu"],h1,h2,h3,p,label {
+  transition:background-color 240ms ease,border-color 240ms ease,color 200ms ease;
+}
+.st-key-top-navigation {position:relative; border:1px solid var(--line); border-radius:22px; padding:8px; background:var(--surface); box-shadow:0 3px 0 var(--shadow);}
+.st-key-top-navigation [role="radiogroup"] {gap:7px; flex-wrap:wrap;}
+.st-key-top-navigation [role="radiogroup"] label {padding:10px 18px; margin:0; background:transparent; cursor:pointer; border:1px solid transparent; border-radius:15px; transition:background var(--motion-fast),border-color var(--motion-fast),box-shadow var(--motion-fast),transform var(--motion-normal) var(--ease-spring);}
+.st-key-top-navigation [data-testid="stRadioOption"] > div > div:not([data-testid]) {display:none;}
+.st-key-top-navigation [role="radiogroup"] label:has(input:checked) {border-color:var(--selected-line); background:var(--peach); box-shadow:0 2px 4px var(--shadow);}
+.st-key-top-navigation [role="radiogroup"] label:has(input:checked) p {color:var(--selected-ink); font-weight:650;}
+.st-key-top-navigation [role="radiogroup"] p {color:var(--muted); font-size:13px; font-weight:600;}
+.st-key-top-navigation [role="radiogroup"] label:has(input:focus-visible),.st-key-top-navigation label[data-focus-visible="true"] {outline:2px solid var(--accent); outline-offset:2px;}
+.st-key-dashboard-hero {padding:35px 0 24px;}
+.eyebrow {font-family:Consolas,"Microsoft YaHei",monospace; font-size:10px; font-weight:500; letter-spacing:2px; color:var(--muted); margin:0 0 23px;}
+.hero-copy h1 {font-family:"Microsoft YaHei","Segoe UI",sans-serif; font-size:clamp(42px,5.3vw,70px); font-weight:800; line-height:1.23; letter-spacing:-3px; margin:0 0 23px; padding:0; color:var(--ink);}
+.hero-copy h1 .hero-accent {color:var(--accent); position:relative; display:inline-block;}
+.hero-copy h1 .hero-accent:after {content:""; position:absolute; height:4px; width:100%; background:var(--accent); bottom:-6px; left:0; border-radius:50%; transform:rotate(-2deg); opacity:.7;}
+.hero-copy p {font-size:14px; line-height:1.9; color:var(--muted); max-width:420px; margin:0 0 22px;}
+.hero-note {font-size:11px; color:var(--muted); margin-top:15px;}
+.learning-figure {position:relative; max-width:385px; margin:6px auto 0;}
+.learning-figure img {width:100%; height:auto; display:block;}
+.learning-figure > span {display:block; text-align:center; font-family:Consolas,monospace; font-size:9px; letter-spacing:2px; color:var(--muted); margin-top:-9px;}
+.stButton button, .stFormSubmitButton button {border:1px solid var(--line); border-radius:13px; min-height:42px; padding:8px 19px; background:transparent; color:var(--ink); font-size:12px; box-shadow:0 2px 0 #2625200a; transition:background var(--motion-fast),border-color var(--motion-fast),color var(--motion-fast),box-shadow var(--motion-fast),transform var(--motion-normal) var(--ease-spring);}
+.stButton button[kind="primary"], .stFormSubmitButton button[kind="primary"], .stFormSubmitButton button[kind="primaryFormSubmit"] {background:var(--ink); color:var(--paper); border-color:var(--ink);}
+.stButton button:not(:disabled):hover,.stFormSubmitButton button:not(:disabled):hover {border-color:var(--accent); color:var(--accent);}
+.stButton button[kind="primary"]:not(:disabled):hover,.stFormSubmitButton button[kind="primary"]:not(:disabled):hover,.stFormSubmitButton button[kind="primaryFormSubmit"]:not(:disabled):hover {background:var(--accent); color:#201712; border-color:var(--accent);}
+.st-key-hero-actions [data-testid="stHorizontalBlock"] {gap:10px;}
+.st-key-hero-actions button {width:100%;}
+.rhythm-header {display:flex; align-items:center; justify-content:space-between; gap:12px; margin:5px 0 15px;}
+.rhythm-header h3 {font-size:15px; font-weight:600; margin:0; padding:0; letter-spacing:-.4px;}
+.rhythm-header > span {font-size:10px; color:var(--muted);}
+.week-strip {display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px;}
+.day-cell {min-height:98px; display:flex; flex-direction:column; padding:13px 11px 12px; border:1px solid var(--line); border-radius:15px; gap:10px;}
+.day-cell > span {font-size:10px; color:var(--muted);}
+.day-cell strong {font-size:15px; font-weight:600; white-space:nowrap;}
+.day-cell small {font-size:9px; color:var(--muted); line-height:1.4;}
+.day-cell.available {background:var(--peach); border-color:var(--selected-line);}
+.day-cell.available > span {color:var(--selected-ink);}
+.day-cell.rest strong {color:var(--muted); font-size:12px; font-weight:400;}
+.section-heading {border-top:1px solid var(--line); padding:30px 0 8px; margin-top:16px; display:flex; align-items:center; justify-content:space-between; gap:15px;}
+.section-heading > div {display:flex; align-items:center; gap:12px;}
+.section-number {font-family:Georgia,serif; font-style:italic; font-size:18px; color:var(--accent);}
+.section-heading h2 {font-size:22px; font-weight:600; letter-spacing:-.8px; margin:0; padding:0;}
+.section-detail {font-size:10px; color:var(--muted);}
+[data-testid="stMetric"] {padding:17px 0 23px; background:transparent; border-bottom:1px solid var(--line);}
+[data-testid="stMetricLabel"] p {font-size:11px; font-weight:400; color:var(--muted);}
+[data-testid="stMetricValue"] {font-family:Georgia,"Microsoft YaHei",serif; font-size:36px; line-height:1.3; letter-spacing:-1px; color:var(--ink);}
+[data-testid="stCaptionContainer"] p {font-size:11px; color:var(--muted); line-height:1.8;}
+.empty-state {display:flex; align-items:center; gap:18px; min-height:135px; border:1px dashed var(--line); background:var(--soft); border-radius:18px; padding:25px;}
+.empty-symbol {font-family:Georgia,serif; font-size:34px; color:var(--muted); flex-shrink:0;}
+.empty-state h3 {font-size:14px; font-weight:600; margin:0 0 8px; padding:0;}
+.empty-state p {font-size:12px; color:var(--muted); line-height:1.85; margin:0;}
+.page-intro {padding:35px 0 22px;}
+.page-intro h1 {font-size:44px; font-weight:750; letter-spacing:-2px; margin:0 0 12px; padding:0;}
+.page-intro p {font-size:13px; line-height:1.8; color:var(--muted); margin:0;}
+[data-testid="stForm"] {border:1px solid var(--line); border-radius:18px; padding:26px; background:var(--surface);}
+[data-testid="stWidgetLabel"] p {font-size:12px; color:var(--label);}
+[data-baseweb="input"],[data-baseweb="base-input"],[data-baseweb="select"] > div {border-radius:4px;}
+input,textarea {font-size:13px !important;}
+[class*="st-key-profile_goals_"] textarea::placeholder {color:var(--muted); opacity:.8;}
+[data-testid="stExpander"] {border:1px solid var(--line); border-radius:16px;}
+[data-testid="stExpander"] details,[data-testid="stExpander"] summary {border-radius:15px;}
+[data-testid="stExpander"] summary {font-size:13px;}
+[data-testid="stAlert"] {border-radius:14px; font-size:12px;}
+h2 {font-size:24px; font-weight:650; letter-spacing:-.8px;}
+h3 {font-size:17px; font-weight:600;}
+.goal-sheet {padding:24px; border-left:2px solid var(--accent); background:var(--goal); min-height:135px;}
+.goal-sheet h3 {font-family:Georgia,"Microsoft YaHei",serif; font-size:20px; margin:0 0 15px; padding:0;}
+.goal-sheet p {font-size:13px; line-height:2; white-space:pre-wrap; margin:0; color:var(--label);}
+.goal-sheet small {display:block; font-size:10px; color:var(--muted); margin-top:15px;}
+.site-footer {margin-top:45px; padding-top:24px; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:15px; color:var(--muted); font-size:10px;}
+.footer-brand {font-family:Georgia,serif; font-size:18px; font-weight:700; color:var(--ink); letter-spacing:-.7px;}
+.footer-status {font-size:10px;}
+/* 登录区复用纸张、圆角和珊瑚色，保持表单宽度适合阅读。 */
+.st-key-auth-shell {max-width:680px; margin-inline:auto;}
+.st-key-auth-shell .page-intro {padding-top:30px; padding-bottom:12px;}
+.st-key-auth-shell .page-intro h1 {font-size:38px; line-height:1.35;}
+.st-key-auth-shell [data-testid="stForm"] {box-shadow:0 8px 28px #8c76550b;}
+.st-key-auth-shell .stFormSubmitButton button {width:100%;}
+.st-key-auth_mode [role="radiogroup"] {gap:10px;}
+.st-key-auth_mode [data-testid="stRadioOption"] {border-radius:12px; padding:8px 15px; transition:background var(--motion-fast);}
+.st-key-auth_mode [data-testid="stRadioOption"]:has(input:checked) {background:var(--peach);}
+.st-key-account-bar {margin-top:2px;}
+/* 动画只改变视觉，不参与提交或保存；用短暂回弹回应操作。 */
+@keyframes pilot-arrive {
+  from {opacity:.25; transform:translateY(6px);}
+  to {opacity:1; transform:translateY(0);}
+}
+@keyframes pilot-pop {
+  0% {opacity:.25; transform:translateY(4px) scale(.99);}
+  100% {opacity:1; transform:none;}
+}
+/* Without JS, retain a simple entrance. The controller otherwise owns page motion. */
+html:not([data-pilot-motion]) [class*="st-key-page-content-"],
+html:not([data-pilot-motion]) .st-key-auth-shell .page-intro {animation:pilot-arrive 320ms var(--ease-out) both;}
+.learning-figure img,.brand-mark,.empty-symbol {transition:transform 450ms var(--ease-spring);}
+.day-cell {transition:transform var(--motion-normal) var(--ease-spring),box-shadow var(--motion-normal),border-color var(--motion-fast),background-color 240ms ease;}
+[data-testid="stMetric"],.empty-state,.goal-sheet {transition:background var(--motion-normal),box-shadow var(--motion-normal);}
+.goal-sheet {border-radius:0 16px 16px 0;}
+[data-testid="stAlert"],[data-testid="stToast"] {animation:pilot-pop 350ms var(--ease-out);}
+[data-testid="stExpander"] {transition:border-color var(--motion-fast),box-shadow var(--motion-normal);}
+[data-testid="stExpander"] summary {transition:background var(--motion-fast),color var(--motion-fast);}
+[data-testid="stExpander"] details[open] > div {animation:pilot-arrive 260ms var(--ease-out);}
+/* 聚焦高亮保持控件尺寸稳定，不让光标或表单发生跳动。 */
+[data-testid="stTextInputRootElement"],[data-testid="stNumberInputContainer"],
+[data-testid="stTextAreaRootElement"],[data-baseweb="input"],[data-baseweb="select"] > div,
+[data-testid="stSelectbox"] [role="group"],[data-testid="stMultiSelect"] [role="group"],
+[data-testid="stDateInput"] [role="group"] {
+  border-radius:11px;
+  transition:border-color var(--motion-fast),box-shadow var(--motion-fast),background var(--motion-fast);
+}
+[data-testid="stTextInputRootElement"]:focus-within,[data-testid="stNumberInputContainer"]:focus-within,
+[data-testid="stTextAreaRootElement"]:focus-within,[data-baseweb="input"]:focus-within,
+[data-testid="stSelectbox"] [role="group"]:focus-within,[data-testid="stMultiSelect"] [role="group"]:focus-within,
+[data-baseweb="select"] > div:focus-within,[data-testid="stDateInput"] [role="group"]:focus-within {
+  border-color:var(--accent); box-shadow:0 0 0 3px var(--focus);
+}
+[data-testid="stCheckbox"] label {border-radius:8px; transition:background var(--motion-fast);}
+[data-testid="stCheckbox"] label:has(input:checked) {background:#71958212;}
+[data-testid="stCheckbox"] label:has(input:focus-visible) {outline:2px solid var(--accent); outline-offset:3px;}
+[role="option"],[role="tab"],[data-testid="stNumberInput"] button {transition:background var(--motion-fast),color var(--motion-fast),transform var(--motion-fast) var(--ease-out);}
+[role="listbox"] {border-radius:12px; animation:pilot-arrive 180ms var(--ease-out);}
+[data-testid="stSelectbox"] button svg {transition:transform var(--motion-normal) var(--ease-spring);}
+[data-testid="stSelectbox"] button[aria-expanded="true"] svg {transform:rotate(180deg);}
+.stButton button:focus-visible,.stFormSubmitButton button:focus-visible {outline:2px solid var(--accent); outline-offset:3px;}
+/* 触屏不保留悬停效果；禁用按钮不产生可点击的视觉反馈。 */
+@media(hover:hover) and (pointer:fine) {
+  .theme-picker button:hover {background:var(--hover); color:var(--ink);}
+  .theme-picker button[aria-pressed="true"]:hover {background:var(--peach); color:var(--selected-ink);}
+  .st-key-top-navigation [role="radiogroup"] label:hover {background:var(--hover); transform:translateY(-1px);}
+  .st-key-top-navigation [role="radiogroup"] label:has(input:checked):hover {background:var(--peach);}
+  .stButton button:not(:disabled):hover,.stFormSubmitButton button:not(:disabled):hover {transform:translateY(-2px); box-shadow:0 5px 12px var(--shadow);}
+  .day-cell:hover {transform:translateY(-2px); box-shadow:0 7px 16px var(--shadow); border-color:var(--accent);}
+  .learning-figure:hover img {transform:translateY(-5px) rotate(2deg);}
+  .wordmark:hover .brand-mark {transform:rotate(12deg) scale(1.1);}
+  .empty-state:hover .empty-symbol {transform:rotate(-10deg) scale(1.1);}
+  [data-testid="stMetric"]:hover {background:var(--soft);}
+  .goal-sheet:hover {box-shadow:0 5px 15px #8c765512;}
+  [data-testid="stExpander"] summary:hover {background:var(--peach); color:var(--selected-ink);}
+  [data-testid="stCheckbox"] label:hover {background:var(--peach);}
+}
+.stButton button:not(:disabled):active,.stFormSubmitButton button:not(:disabled):active,
+.st-key-top-navigation [role="radiogroup"] label:active {transform:translateY(1px) scale(.97); box-shadow:none; transition-duration:80ms;}
+[data-testid="stNumberInput"] button:not(:disabled):active {transform:scale(.88);}
+/* Keep the shell steady. Only the prepared content is captured and crossfaded. */
+[data-testid="stMain"] {scrollbar-gutter:stable;}
+.pilot-current-page {overflow-anchor:none;}
+.pilot-page-snapshot {position:fixed; inset:0; z-index:20; overflow:hidden; contain:layout paint; pointer-events:none; user-select:none;}
+.pilot-page-snapshot * {pointer-events:none !important;}
+/* Retain readable old content while the server prepares the next view. */
+html[data-pilot-navigation="pending"] .pilot-current-page[data-stale="true"],
+html[data-pilot-navigation="pending"] .pilot-current-page [data-stale="true"] {opacity:1 !important;}
+.st-key-top-navigation [role="radiogroup"].pilot-nav-ready {position:relative; isolation:isolate;}
+.pilot-nav-ready label {position:relative; z-index:1;}
+.pilot-nav-capsule {position:absolute; top:0; left:0; z-index:0; pointer-events:none; border:1px solid var(--selected-line); border-radius:15px; background:var(--peach); box-shadow:0 2px 4px var(--shadow);}
+.pilot-nav-capsule[data-ready="true"] {transition:transform 400ms var(--ease-out),width 320ms var(--ease-out),height 320ms var(--ease-out),background-color 240ms,border-color 240ms;}
+.st-key-top-navigation .pilot-nav-ready label:has(input:checked),
+.st-key-top-navigation .pilot-nav-ready label:has(input:checked):hover {background:transparent; border-color:transparent; box-shadow:none;}
+.st-key-top-navigation .pilot-nav-ready label:has(input:checked) p {font-weight:600;}
+.st-key-top-navigation .pilot-nav-ready label:hover,
+.st-key-top-navigation .pilot-nav-ready label:active {transform:none;}
+.st-key-top-navigation:after {content:""; position:absolute; height:2px; left:20px; right:20px; bottom:0; border-radius:2px; background:var(--accent); opacity:0; transform:scaleX(0); transform-origin:left; pointer-events:none;}
+html[data-pilot-navigation="pending"] .st-key-top-navigation:after {animation:pilot-wait 1500ms ease-out 180ms both;}
+@keyframes pilot-wait {
+  0% {opacity:0; transform:scaleX(.08);}
+  15% {opacity:.55;}
+  100% {opacity:.55; transform:scaleX(.86);}
+}
+@media(max-width:900px) {
+  .block-container {padding:1.4rem 2rem 2rem;}
+  .st-key-dashboard-hero {padding-top:24px;}
+  .hero-copy h1 {font-size:48px; letter-spacing:-2px;}
+  .day-cell {padding:12px 9px;}
+  .day-cell strong {font-size:13px;}
+}
+@media(max-width:640px) {
+  .block-container {padding:1rem 1.15rem 2rem;}
+  .wordmark {font-size:27px;}
+  .edition {display:none;}
+  .masthead-meta {font-size:9px; letter-spacing:0;}
+  .masthead-tools {gap:10px;}
+  .masthead-tools .masthead-meta {display:none;}
+  .theme-picker button {width:34px; height:34px;}
+  .st-key-top-navigation {border-radius:19px; padding:6px;}
+  .st-key-top-navigation [role="radiogroup"] {gap:4px;}
+  .st-key-top-navigation [role="radiogroup"] label {padding:9px 12px; border-radius:12px;}
+  .pilot-nav-capsule {border-radius:12px;}
+  .hero-copy h1 {font-size:46px;}
+  .learning-figure {max-width:280px;}
+  .week-strip {grid-template-columns:repeat(4,minmax(0,1fr));}
+  .day-cell {min-height:94px;}
+  .rhythm-header {align-items:flex-start; flex-direction:column;}
+  .page-intro h1 {font-size:35px;}
+  .section-heading h2 {font-size:19px;}
+  .section-detail {max-width:120px; text-align:right;}
+  [data-testid="stForm"] {padding:18px;}
+  .site-footer {flex-wrap:wrap;}
+}
+/* 尊重系统“减少动态效果”，关闭入场、位移和回弹，保留颜色反馈。 */
+@media(prefers-reduced-motion:reduce) {
+  *,*:before,*:after {animation:none !important; transition:none !important; scroll-behavior:auto !important;}
+  .day-cell,.learning-figure img,.brand-mark,.empty-symbol,
+  .stButton button,.stFormSubmitButton button,
+  .st-key-top-navigation [role="radiogroup"] label,[data-testid="stNumberInput"] button {transform:none !important;}
+}
