@@ -3,6 +3,7 @@ const $ = (q, root=document) => root.querySelector(q);
 const E = v => String(v ?? "").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let me=null, data=null, page="overview", authPage="login", recoveryCode="", history=[], preview=null, trace=[], sessions=[], authEpoch=0, accountServiceReady=true;
 const drafts=new Map();
+let renderedView=null, navigationRole=null;
 const names={overview:"学习概览",profile:"学习档案",tasks:"学习任务",plan:"学习计划",records:"学习记录",account:"账号设置",assistant:"AI 助手",development:"开发进度"};
 const labels={title:"任务标题",subject:"科目",due_date:"截止日期",estimated_minutes:"预计分钟",priority:"优先级",status:"状态",requires_computer:"需要电脑",notes:"备注",goals:"学习目标",weekly_hours:"每周小时",speed:"学习速度",preference:"学习偏好",max_session_minutes:"单次时长上限",levels:"各科基础",priorities:"科目优先级",availability:"每天时间和设备",study_date:"实际日期",duration:"实际分钟",note:"备注",minutes:"分钟",devices:"设备"};
 const actionNames={create_task:"创建任务",update_task:"修改任务",delete_task:"删除任务",update_profile:"修改学习档案",log_session:"保存真实学习记录",save_schedule:"保存每周计划"};
@@ -30,15 +31,15 @@ async function api(path,method="GET",body){
   }
   return value;
 }
-function clearPrivate(){authEpoch++;me=data=null;history=[];trace=[];preview=null;sessions=[];drafts.clear();page="overview";}
+function clearPrivate(){StudyMotion.reset();$("#content").replaceChildren();renderedView=null;authEpoch++;me=data=null;history=[];trace=[];preview=null;sessions=[];drafts.clear();page="overview";}
 function saveDrafts(){
-  document.querySelectorAll("#content form").forEach(form=>{
+  document.querySelectorAll("#content > .page:not(.page-leaving) form").forEach(form=>{
     const values={};form.querySelectorAll("input,select,textarea").forEach(input=>{if(input.name)values[input.name]=input.type==="checkbox"?input.checked:input.value;});
     drafts.set(form.id,values);
   });
 }
 function restoreDrafts(){
-  document.querySelectorAll("#content form").forEach(form=>{
+  document.querySelectorAll("#content > .page:not(.page-leaving) form").forEach(form=>{
     const values=drafts.get(form.id);if(!values)return;
     form.querySelectorAll("input,select,textarea").forEach(input=>{if(input.name in values){if(input.type==="checkbox")input.checked=values[input.name];else input.value=values[input.name];}});
   });
@@ -66,10 +67,23 @@ function barChart(items){
 }
 function render(){
   $("#account-bar").innerHTML=me?'<span>'+E(me.personal.avatar)+" 已登录："+E(me.personal.nickname)+"（"+E(me.account.username)+"）"+(me.account.role==="developer"?" · 开发者":"")+'</span><button class="btn small" data-action="logout">退出登录</button>':"";
-  $("#navigation").hidden=!me;
-  $("#navigation").innerHTML=me?Object.entries(names).filter(([id])=>id!=="development"||me.account.role==="developer").map(([id,label])=>'<button data-page="'+id+'"'+(page===id?' aria-current="page"':"")+'>'+label+'</button>').join(""):"";
+  const nav=$("#navigation"), role=me?.account.role||null;
+  nav.hidden=!me;
+  if(role!==navigationRole){
+    navigationRole=role;
+    nav.innerHTML=me?'<span class="nav-capsule" aria-hidden="true"></span>'+Object.entries(names).filter(([id])=>id!=="development"||role==="developer").map(([id,label])=>'<button data-page="'+id+'">'+label+'</button>').join(""):"";
+  }
+  nav.querySelectorAll("button[data-page]").forEach(button=>{
+    if(button.dataset.page===page)button.setAttribute("aria-current","page");
+    else button.removeAttribute("aria-current");
+  });
+  StudyMotion.navigation();
   const renderers={overview:overview,profile:profile,tasks:tasks,plan:plan,records:records,account:account,assistant:assistant,development:development};
-  $("#content").innerHTML='<section class="page">'+(recoveryCode?recovery():me&&data?renderers[page]():login())+'</section>';
+  const view=recoveryCode?"recovery":me&&data?"user:"+me.account.id+":"+page:"auth:"+authPage;
+  const next=document.createElement("section");next.className="page";
+  next.innerHTML=recoveryCode?recovery():me&&data?renderers[page]():login();
+  StudyMotion.replace($("#content"),next,view!==renderedView);
+  renderedView=view;
   restoreDrafts();
 }
 function login(){
@@ -181,8 +195,9 @@ document.addEventListener("click",async event=>{
   const button=event.target.closest("button");if(!button)return;
   try{
     if(button.dataset.themeChoice){theme(button.dataset.themeChoice);return;}
-    if(button.dataset.page){saveDrafts();page=button.dataset.page;notice("");render();return;}
-    if(button.dataset.authPage){saveDrafts();authPage=button.dataset.authPage;notice("");render();return;}
+    if(button.closest(".page-leaving"))return;
+    if(button.dataset.page){if(page===button.dataset.page)return;saveDrafts();page=button.dataset.page;notice("");render();return;}
+    if(button.dataset.authPage){if(authPage===button.dataset.authPage)return;saveDrafts();authPage=button.dataset.authPage;notice("");render();return;}
     if(button.dataset.reject){button.disabled=true;await api("/proposals/"+button.dataset.reject+"/reject","POST",{});saveDrafts();await refresh();render();notice("提案已忽略，没有修改学习数据。");return;}
     switch(button.dataset.action){
       case "dismiss":notice("");break;

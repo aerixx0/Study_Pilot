@@ -211,6 +211,10 @@ def create_app(auth_factory=None):
     def js_file():
         return FileResponse(ROOT/"public"/"study.js", media_type="text/javascript")
 
+    @app.get("/motion.js")
+    def motion_file():
+        return FileResponse(ROOT/"public"/"motion.js", media_type="text/javascript")
+
     @app.get("/learning-map.svg")
     def image_file():
         return FileResponse(ROOT/"assets"/"learning-map.svg", media_type="image/svg+xml")
