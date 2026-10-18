@@ -9,3 +9,7 @@
 **/data/
 .venv/
 node_modules/
+
+.runtime/
+verification/
+logs/

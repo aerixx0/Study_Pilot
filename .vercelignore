@@ -10,3 +10,7 @@
 .env
 .env.*
 .vercel
+
+.runtime/
+verification/
+logs/
