@@ -13,6 +13,7 @@ from studypilot.auth import AuthStore, AuthError
 from studypilot.auth_ui import login_gate, account_bar, account_settings
 from studypilot.schedule_ui import schedule_page
 from studypilot.agent_ui import agent_page
+from studypilot.ai import ai_configured
 from studypilot.models import DAYS, DEVICES, LEVELS, PRIORITIES, SPEEDS, STATUSES, SUBJECTS, StudyProfile, TaskInput, ValidationError
 from studypilot.progress import get_progress
 from studypilot.theme import apply_theme, availability_strip, empty_state, footer, learning_illustration, masthead, page_intro, section_heading
@@ -303,7 +304,7 @@ def main():
                 page_intro("05", "一步一步，成为 Agent", "从能用的学习工具开始，逐渐加入排课与智能决策。", "BUILT ONE STEP AT A TIME")
                 st.write("✅ 第一阶段：学习档案、任务增删改、完成状态、实际学习记录、SQLite 和基础统计。")
                 st.write("✅ 第二阶段：按每周预算、每天时间和设备限制生成规则计划，预览后确认保存；排不下的任务说明原因。")
-                st.write("✅ 第三阶段：OpenAI Responses 工具循环、只读查询、持久化修改提案和用户确认执行。联网使用需配置 API Key。")
+                st.write("✅ 第三阶段：免费国产模型（GLM-4.7-Flash / Xing4.0-29B）工具循环、只读查询、持久化修改提案和用户确认执行。联网使用需配置免费模型密钥。")
                 st.write("第四阶段：完善建议、目标里程碑、图表和开源协作。")
                 st.info("AI 助手只提供读取与提案工具。模型不能确认执行，学习计划仍由规则算法生成。")
     except AuthError:
@@ -315,13 +316,13 @@ def main():
         else:
             st.error("无法打开本地数据库。请检查 STUDYPILOT_DB 路径、写入权限和磁盘空间。数据库不会被自动覆盖。")
         st.stop()
-    ai_configured = bool(os.getenv("OPENAI_API_KEY", "").strip())
-    footer(ai_configured)
+    ai_enabled = ai_configured()
+    footer(ai_enabled)
     with st.expander("运行状态与功能边界"):
-        if ai_configured:
-            st.info("已配置 API Key：可在 AI 助手页同意发送学习数据后使用 OpenAI。模型访问仍取决于账号权限与网络。")
+        if ai_enabled:
+            st.info("已配置免费模型密钥：可在 AI 助手页同意发送学习数据后使用。限流时自动改用备用免费模型，不会改用收费服务。")
         else:
-            st.info("AI 未启用：未配置 API Key。档案、任务和统计正常可用。")
+            st.info("AI 未启用：未配置免费模型密钥。档案、任务和统计正常可用。")
         st.caption("规则排课已启用。AI 助手可读取学习数据、生成修改提案，只有用户核对并确认后才执行；不会自动记入计划时长或修改账号权限。")
 
 

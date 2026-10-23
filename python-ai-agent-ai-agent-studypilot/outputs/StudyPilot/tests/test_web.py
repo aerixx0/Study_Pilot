@@ -165,11 +165,31 @@ class WebTests(unittest.TestCase):
         self.assertEqual(self.client.get("/api/development").status_code,200)
 
     def test_ai_consent_and_missing_key_never_execute_business_changes(self):
-        with patch.dict(os.environ,{"OPENAI_API_KEY":""}):
+        with patch.dict(os.environ,{"ZHIPU_API_KEY":"","SILICONFLOW_API_KEY":""}):
             self.assertEqual(self.call("/agent",dict(prompt="新增任务")).status_code,400)
             response=self.call("/agent",dict(prompt="新增任务",consent=True))
             self.assertEqual(response.status_code,502,response.text)
         self.assertEqual(self.db.get_tasks(),[])
+
+    def test_ai_quota_concurrent_and_reopened_storage(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from studypilot.quota import QuotaExceeded
+        if hasattr(self.auth, "source"):
+            from studypilot.postgres import Postgres, PostgresAuthStore
+            reopened = PostgresAuthStore(Postgres(self.auth.source.url))
+        else:
+            reopened = AuthStore(self.auth.root)
+        # Site counts may include earlier tests on the isolated PostgreSQL DB.
+        with patch.dict(os.environ, {"STUDYPILOT_AI_USER_LIMIT":"2", "STUDYPILOT_AI_SITE_LIMIT":"100000"}):
+            def attempt(index):
+                try:
+                    (self.auth if index % 2 else reopened).ai_meter().reserve(self.token)
+                    return True
+                except QuotaExceeded:
+                    return False
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                results = list(pool.map(attempt, range(6)))
+            self.assertEqual(sum(results), 2)
 
 
 @unittest.skipUnless(os.getenv("STUDYPILOT_TEST_POSTGRES"),"需显式提供独立测试 PostgreSQL URL")

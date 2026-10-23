@@ -7,6 +7,7 @@ from datetime import date, timedelta
 import json
 import os
 from pathlib import Path
+import socket
 import sqlite3
 import tempfile
 import unittest
@@ -15,7 +16,8 @@ from urllib.error import HTTPError, URLError
 
 from streamlit.testing.v1 import AppTest
 
-from studypilot.agent import AIError, OpenAIResponses, run_agent
+from studypilot.agent import AIError, run_agent
+from studypilot.ai import FreeChatTransport
 from studypilot.agent_tools import AgentTools, TOOLS, parse_arguments
 from studypilot.auth import AuthStore, AuthError
 from studypilot.database import ConfirmationRequired, ConflictError, Database
@@ -78,8 +80,7 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(list_proposals(self.auth, self.token)[0]["state"], "pending")
         self.assertIn(reasoning, fake.requests[1]["input"])
         self.assertTrue(any(item.get("type") == "function_call_output" for item in fake.requests[1]["input"]))
-        self.assertFalse(fake.requests[0]["store"])
-        self.assertFalse(fake.requests[0]["parallel_tool_calls"])
+        self.assertEqual(set(fake.requests[0]), {"instructions", "input", "tools", "max_output_tokens"})
         self.assertNotIn(self.token, json.dumps(fake.requests))
         self.assertNotIn(PASSWORD, json.dumps(fake.requests))
         self.assertTrue(all(tool["strict"] and not tool["parameters"]["additionalProperties"] for tool in TOOLS))
@@ -261,12 +262,12 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(self.db.get_events(), [])
         self.assertEqual(list_proposals(self.auth, self.token)[0]["state"], "pending")
 
-    def test_no_key_and_bad_model_are_explicit(self):
-        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}):
+    def test_no_key_and_bad_mode_are_explicit(self):
+        with patch.dict(os.environ, {"ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": ""}):
             with self.assertRaisesRegex(AIError, "未配置"):
                 run_agent(self.auth, self.token, "查询")
         with self.assertRaises(ValidationError):
-            run_agent(self.auth, self.token, "查询", model="https://foreign.example/key", transport=FakeResponses())
+            run_agent(self.auth, self.token, "查询", mode="https://foreign.example/key", transport=FakeResponses())
 
     def test_revoked_session_during_api_request_cannot_stage_a_change(self):
         owner = self
@@ -287,23 +288,34 @@ class AgentTests(unittest.TestCase):
             run_agent(self.auth, self.token, "查询", transport=FakeResponses(completed({"type": "message", "content": None})))
 
 
+class FailingOpener:
+    def __init__(self, error):
+        self.error = error
+
+    def open(self, request, timeout=None):
+        raise self.error
+
+
 class TransportTests(unittest.TestCase):
     def test_http_errors_and_timeouts_do_not_expose_secrets(self):
-        client = OpenAIResponses("test-api-key-not-real")
-        for error, expected in [(HTTPError('https://api.openai.com',401,'secret',{},None), "身份验证"),
-                                (HTTPError('https://api.openai.com',429,'secret',{},None), "额度"), (URLError("secret"), "超时")]:
-            with patch.object(client._opener, "open", side_effect=error), self.assertRaises(AIError) as caught:
-                client.create({}, timeout=1)
-            self.assertIn(expected, str(caught.exception))
-            self.assertNotIn("test-api-key", str(caught.exception))
-            self.assertNotIn("secret", str(caught.exception))
+        key = "test-api-key-not-real"
+        for error, expected in [(HTTPError('https://open.bigmodel.cn', 401, 'secret', {}, None), "身份验证"),
+                                (HTTPError('https://open.bigmodel.cn', 429, 'secret', {}, None), "限流"),
+                                (URLError("secret"), "连接失败"), (socket.timeout("secret"), "超时")]:
+            with self.subTest(expected=expected):
+                transport = FreeChatTransport(keys={"zhipu": key}, opener=FailingOpener(error))
+                with self.assertRaises(AIError) as caught:
+                    transport.create({}, timeout=1)
+                self.assertIn(expected, str(caught.exception))
+                self.assertNotIn(key, str(caught.exception))
+                self.assertNotIn("secret", str(caught.exception))
 
 
 class AgentUITests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         env = patch.dict(os.environ, {"STUDYPILOT_AUTH_DIR": str(Path(self.temp.name)/'accounts'),
-            "STUDYPILOT_DB": str(Path(self.temp.name)/'legacy.db'), "OPENAI_API_KEY": "", "OPENAI_MODEL": ""})
+            "STUDYPILOT_DB": str(Path(self.temp.name)/'legacy.db'), "ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": ""})
         env.start(); self.addCleanup(env.stop)
         self.auth = AuthStore(Path(self.temp.name)/'accounts')
         self.auth.register("learner", PASSWORD, confirmed=True)
@@ -330,7 +342,7 @@ class AgentUITests(unittest.TestCase):
     def test_question_consent_proposal_confirmation_and_draft_retention(self):
         task = asdict(TaskInput('模型建议任务','数学',date.today().isoformat()))
         fake = FakeResponses(completed(call('propose_task_create',dict(task=task,reason='用户请求'))),answer())
-        with patch.dict(os.environ,{'OPENAI_API_KEY':'test-not-sent'}), patch('studypilot.agent_ui.run_agent',side_effect=lambda *args,**kwargs: run_agent(*args,**kwargs,transport=fake)):
+        with patch.dict(os.environ,{'ZHIPU_API_KEY':'test-not-sent'}), patch('studypilot.agent_ui.run_agent',side_effect=lambda *args,**kwargs: run_agent(*args,**kwargs,transport=fake)):
             self.app.run(); self.app.text_area(key='agent_prompt').set_value('帮我新增任务')
             self.click('发送给学习助手')
             self.assertEqual(self.app.text_area(key='agent_prompt').value,'帮我新增任务')

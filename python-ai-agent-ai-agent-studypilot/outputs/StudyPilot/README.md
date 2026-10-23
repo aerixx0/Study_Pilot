@@ -1,6 +1,6 @@
 # StudyPilot 📚
 
-一个逐步构建的开源教育 AI Agent 项目。**当前发布 v0.5.0：新增 Vercel Web 入口和 PostgreSQL 云端持久化。** 保留本地 Streamlit 版、账号隔离、规则排课、亮色／深色和第三阶段的 OpenAI 工具循环、只读查询、修改提案与用户确认执行。
+一个逐步构建的开源教育 AI Agent 项目。**当前发布 v0.6.0：AI 改用免费国产模型（主 GLM-4.7-Flash，备用 Xing4.0-29B）。** 保留本地 Streamlit 版、Vercel Web 入口、PostgreSQL 云端持久化、账号隔离、规则排课、亮色／深色和只读查询、修改提案与用户确认执行。
 
 部署到 Vercel 请先看 [DEPLOYMENT.md](DEPLOYMENT.md)：根目录为 python-ai-agent-ai-agent-studypilot/outputs/StudyPilot，使用 FastAPI 入口与 PostgreSQL。原 app.py 是本地 Streamlit 界面，不是 Vercel 函数入口。云端不会自动上传或迁移本地账号数据。
 
@@ -30,7 +30,7 @@ v0.1.1 重新设计了界面：参考 [Offmap](https://www.offmap-x.ai/) 的大�
 - 基础图表：实际学习分钟、科目投入比例、每周学习历史。
 - 规则排课：扣除本周真实用时后按每周预算、每日容量、电脑条件、截止日期和优先级安排任务，按单次时长上限拆分，无法安排的部分说明原因。预览不写计划，明确确认后保存或替换；重启后可读取。
 
-- AI 助手：通过 OpenAI Responses API 查询当前账号的真实资料、任务、记录和进度；修改先保存待确认提案，显示完整内容或前后差异，用户勾选确认并点击执行后才写入业务数据。模型没有确认执行、SQL、文件、网络或账号权限工具。
+- AI 助手：通过免费国产模型（智谱 GLM-4.7-Flash，限流或超时改用硅基流动 Xing4.0-29B）查询当前账号的真实资料、任务、记录和进度；修改先保存待确认提案，显示完整内容或前后差异，用户勾选确认并点击执行后才写入业务数据。模型没有确认执行、SQL、文件、网络或账号权限工具。
 
 **尚未实现**：考试优先级自动调整、目标里程碑完成率、无人值守自动执行。每天档案只提供可用分钟，不包含具体钟点，因此规则计划展示日期与分钟段；手工任务创建本身不修改计划。未配置 API Key 时所有本地功能继续可用，AI 联网对话不可用。
 
@@ -166,22 +166,23 @@ v0.2.0 按账号角色控制，旧的 `STUDYPILOT_DEV_MODE` 环境变量不再�
 
 当前工作区的启动入口复用了 `work` 环境；如果项目没有 `.venv`，以上命令的 Python 路径可换成 `..\..\work\.venv\Scripts\python.exe`。
 
-## 第三阶段：AI 助手与 API 配置
+## 第三阶段：AI 助手与免费国产模型
 
-实现遵循 [OpenAI 官方函数调用流程](https://developers.openai.com/api/docs/guides/function-calling)：模型返回函数调用，服务端验证白名单和参数，按 call_id 回传结果，保留完整响应项并继续循环。只使用 Python 标准库 HTTPS，不需额外安装 SDK。默认模型为 [gpt-4.1-mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini)，也可选择你有权限使用、支持函数调用和当前严格参数格式的模型。
+实现沿用 OpenAI 兼容的函数调用流程（两家免费服务都提供 `/chat/completions`）：模型返回函数调用，服务端验证白名单和参数，按 call_id 回传结果并继续循环。只使用 Python 标准库 HTTPS，不需额外安装 SDK。适配器位于 `studypilot/ai.py`：主模型智谱 GLM-4.7-Flash，备用模型硅基流动 Xing4.0-29B。两个 Base URL 和模型名写死在代码里，环境变量只能提供密钥；浏览器、对话内容和模型输出都不能指定端点，也不会因为配置而切到收费模型。
 
 在本机 PowerShell 中输入 Key，并在同一终端启动服务；不要把真实 Key 发到聊天中：
 
 ```powershell
-$studyPilotKey = Read-Host "OpenAI API Key" -AsSecureString
-$env:OPENAI_API_KEY = ([System.Net.NetworkCredential]::new("", $studyPilotKey)).Password
-$env:OPENAI_MODEL = "gpt-4.1-mini"
+$zhipuKey = Read-Host "智谱 API Key" -AsSecureString
+$env:ZHIPU_API_KEY = ([System.Net.NetworkCredential]::new("", $zhipuKey)).Password
+$siliconKey = Read-Host "硅基流动 API Key（可留空，只留主模型也能用）" -AsSecureString
+$env:SILICONFLOW_API_KEY = ([System.Net.NetworkCredential]::new("", $siliconKey)).Password
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
-若旧服务仍在运行，先按 Ctrl+C 停止再启动。界面只提示是否检测到 Key，不显示它；配置存在不代表已验证权限、额度或网络。模型名称可在 AI 助手页修改。不自动加载 `.env`，不支持自定义 API 端点。Key 留在服务进程环境中，不写入账号库、提案、模型上下文或导出文件；不要在学习问题和备注中主动填写凭据。
+若旧服务仍在运行，先按 Ctrl+C 停止再启动。界面只提示是否检测到免费模型密钥，不显示它；配置存在不代表已验证额度或网络。不自动加载 `.env`，也不支持自定义 API 端点或模型。Key 留在服务进程环境中，不写入账号库、提案、模型上下文或导出文件；不要在学习问题和备注中主动填写凭据。
 
-进入 AI 助手，填写问题并同意本次向 OpenAI 发送问题、当前对话及工具读取的学习数据，再点击发送。例如：“看看我本周的学习情况”“把任务 #1 的截止日期改到下周一，先给我看提案”。联网调用会使用你的 OpenAI API 账号额度。只读请求不会修改学习资料；修改请求只生成提案，聊天中输入“确认”不会执行。
+进入 AI 助手，选择对话模式、填写问题，并同意本次向免费模型服务发送问题、当前对话及工具读取的学习数据，再点击发送。例如：“看看我本周的学习情况”“把任务 #1 的截止日期改到下周一，先给我看提案”。联网只消耗这两家的免费额度。只读请求不会修改学习资料；修改请求只生成提案，聊天中输入“确认”不会执行。
 
 | 类别 | 工具 |
 |---|---|
@@ -192,15 +193,34 @@ $env:OPENAI_MODEL = "gpt-4.1-mini"
 
 每项提案 30 分钟有效，最多 20 项未过期待审提案。执行时重新验证当前账号和数据版本；旧提案遇到资料变化会被拒绝，需要重新生成。业务修改和执行收据在同一 SQLite 事务中提交，重复点击返回原收据。模型没有执行入口。提案与收据重启后保留；对话仅保留在当前页面会话，刷新或退出后清除。清空对话不执行或删除提案。
 
-每次对话最多 6 轮模型请求、12 次工具调用；每次 HTTP 超时不超过 20 秒，循环在下一轮检查 80 秒总期限。查询分页、响应与上下文均有限制，不自动重试。请求设置 store=false，但这不等于对服务提供方的数据处理或保留政策作额外承诺。超时或失败保留问题草稿和已生成的待审提案，不自动执行。
+每次对话最多 6 轮模型请求、12 次工具调用；每次 HTTP 超时不超过 20 秒，循环在下一轮检查 80 秒总期限。查询分页、响应与上下文均有限制，不自动重试。请求固定 stream=false；不对服务提供方的数据处理或保留政策作额外承诺。超时或失败保留问题草稿和已生成的待审提案，不自动执行。
 
-本机当前未配置真实 Key，协议循环、工具和确认流程使用离线可控响应验证；尚未进行真实 OpenAI 联网、模型权限或计费验证。
+本机当前未配置真实 Key，协议转换、故障切换、工具和确认流程全部用离线可控响应验证；真实联网、免费额度与两家的函数调用兼容性尚未实测，首次配置后请先用只读问题确认。
 
 不要把真实 Key 写进源代码、截图或 Git 仓库。`.env.example` 仅解释变量名。若要清除当前会话 Key：
 
 ```powershell
-Remove-Item Env:OPENAI_API_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:ZHIPU_API_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:SILICONFLOW_API_KEY -ErrorAction SilentlyContinue
 ```
+
+## 免费额度与故障恢复
+
+- 调用顺序固定：先智谱 GLM-4.7-Flash；遇到限流（429）、超时、连接失败或服务端错误，再试硅基流动 Xing4.0-29B。切换后后续工具轮次留在备用服务；认证、参数或响应格式错误直接拒绝，不切换。没有第三家或收费服务兜底。
+- 请求是非流式的：整段响应返回后才发给界面，所以不存在“流式输出已开始后切换模型”。
+- 两家都失败时返回一句可读提示（只含失败类型，不含上游原文），不写入任何学习数据；已生成的待审提案仍在。
+- 服务端持久化限流与全站配额：默认每账号 15 次 / 10 分钟、全站 400 次 / UTC 日，可用 STUDYPILOT_AI_USER_LIMIT、STUDYPILOT_AI_WINDOW_SECONDS、STUDYPILOT_AI_SITE_LIMIT 调整。计数存在账号库（云端为 sp_auth schema），重启不清零；超限返回 429，前端只看到提示，不会重试。
+- 日志只写服务商、模型名、结果类型、状态码和毫秒耗时（logger 名 studypilot.ai），不写提示词、学习资料或密钥。
+
+## 三种对话模式
+
+| 模式 | 用途 | 可用工具 |
+|---|---|---|
+| chat | 日常问答与任意允许的修改 | 全部只读与提案工具 |
+| goal_coach | 只讨论学习目标与优先级 | get_study_profile、get_progress、preview_weekly_plan、propose_profile_update |
+| plan_builder | 按服务器规则构建每周计划 | 只读工具 + preview_weekly_plan、propose_weekly_plan、propose_task_create、propose_task_update |
+
+模式只缩小可用工具范围，不改变写入规则：三种模式都只能生成待确认提案。工具参数仍要在服务端通过白名单、JSON Schema 和业务校验（如 StudyProfile/TaskInput），非法输出被拒并回传给模型修正。学习档案和用户自定义目标不会被读或写以外的任何途径改动。
 
 ## 数据位置、备份与隐私
 
@@ -274,13 +294,13 @@ StudyPilot/
 
 第一、二阶段已完成：可靠的本地学习管理与规则式每周计划；验证每周总预算、每日时间和设备，无法安排的任务明确列出，生成预览经确认后再保存。
 
-第三阶段已实现：OpenAI 工具调用循环、六个只读工具、六个修改提案工具。模型读取资料 → 提出修改 → 用户核对并确认或忽略 → 按原数据版本提交事务。真实联网仍需本机 Key、网络和模型权限。
+第三阶段已实现：免费国产模型工具调用循环、六个只读工具、六个修改提案工具。模型读取资料 → 提出修改 → 用户核对并确认或忽略 → 按原数据版本提交事务。真实联网仍需本机 Key、网络和模型权限。
 
 第四阶段再补真实记录驱动的建议、目标里程碑、可视化和协作文档。当前先提供基础统计、测试和 MIT 许可证，不提前做复杂服务。
 
 ## 上传到 GitHub
 
-仓库还未创建或发布。在项目目录中可以执行：
+仓库已发布到 aerixx0/Study_Pilot，以下初始化步骤仅供新副本参考。在项目目录中可以执行：
 
 ```powershell
 git init
@@ -293,3 +313,5 @@ git commit -m "Build StudyPilot phase 1 MVP"
 然后在 GitHub 创建空仓库，按该仓库页面给出的命令设置 remote 并推送。首次提交前 `.gitignore` 会忽略学习数据与密钥；已被跟踪的文件不会因添加忽略规则自动解除跟踪。
 
 建议每次改动都先运行测试。入门练习见 [LEARNING.md](LEARNING.md)。界面测试方法采用 [Streamlit 官方 AppTest 文档](https://docs.streamlit.io/develop/api-reference/app-testing/st.testing.v1.apptest)，图表 API 参考 [官方 st.bar_chart 文档](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart)。
+
+Free AI Engine v1.0 的配置、故障策略、配额单位及验收边界见 [FREE_AI_ENGINE.md](FREE_AI_ENGINE.md)。

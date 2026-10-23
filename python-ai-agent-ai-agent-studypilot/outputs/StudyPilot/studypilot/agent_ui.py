@@ -1,14 +1,15 @@
 """中文助手及真实的提案审阅入口；对话文字不能代替按钮确认。"""
 
 from datetime import datetime
-import os
 import time
 
 import streamlit as st
 
-from .agent import AIError, DEFAULT_MODEL, run_agent
+from .agent import AIError, MODE_LABELS, MODES, run_agent
+from .ai import BACKUP, PRIMARY, ai_configured
 from .database import ConfirmationRequired, ConflictError
 from .models import ValidationError
+from .quota import QuotaExceeded
 from .proposals import execute_proposal, list_proposals, reject_proposal
 from .schedule_ui import render_plan
 from .theme import page_intro
@@ -104,16 +105,19 @@ def proposal_panel(auth, token):
 
 def agent_page(auth, account):
     page_intro("AI", "先看清，再向前一步", "查询真实学习情况，把修改建议留给你决定。", "YOUR STUDY ASSISTANT")
-    configured = bool(os.getenv("OPENAI_API_KEY", "").strip())
+    configured = ai_configured()
     if not configured:
-        st.info("AI 未启用：本机服务未配置 OPENAI_API_KEY。你仍可查看和处理已保存的提案。")
+        st.info(f"AI 未启用：本机服务未配置 {PRIMARY.key_env} 或 {BACKUP.key_env}。你仍可查看和处理已保存的提案。")
         if account.role == "developer":
             with st.expander("本机配置说明"):
-                st.write("在启动 StudyPilot 的同一终端设置 OPENAI_API_KEY；可用 OPENAI_MODEL 指定支持函数调用的模型，然后重启服务。不要把 Key 发到聊天中或写进源码。")
-                st.caption(f"默认模型：{DEFAULT_MODEL}。实际可用模型取决于你的 OpenAI API 账号权限。")
+                st.write(f"在启动 StudyPilot 的同一终端设置 {PRIMARY.key_env}（主模型）和/或 {BACKUP.key_env}（备用模型），然后重启服务。"
+                         "不要把 Key 发到聊天中或写进源码。")
+                st.caption(f"主模型：{PRIMARY.label}；备用模型：{BACKUP.label}。只使用这两家免费模型，不会自动改用收费服务。")
     else:
-        st.caption("使用 OpenAI Responses API；本次问题、对话上下文及工具读取的当前账号学习数据会发送给 OpenAI。账号密码、恢复码和登录令牌不发送。")
-    model = st.text_input("模型", value=os.getenv("OPENAI_MODEL", "").strip() or DEFAULT_MODEL, max_chars=100, key="agent_model")
+        st.caption(f"使用免费国产模型：{PRIMARY.label}，限流、超时或服务端错误时自动改用 {BACKUP.label}。"
+                   f"本次问题、对话上下文及工具读取的当前账号学习数据会发送给模型服务；账号密码、恢复码和登录令牌不发送。")
+    mode = st.selectbox("对话模式", MODES, index=0, key="agent_mode",
+                        format_func=lambda value: MODE_LABELS[value])
     history = st.session_state.setdefault("agent_history", [])
     if st.button("清空对话", key="agent_clear"):
         st.session_state["agent_history"] = []
@@ -126,24 +130,24 @@ def agent_page(auth, account):
     with st.form("agent_question", clear_on_submit=False):
         prompt = st.text_area("你想查询或调整什么？", key="agent_prompt", max_chars=3000,
                               placeholder="例如：看看我本周的学习情况；把任务 #1 延后到下周一，先给我看修改提案。")
-        consent = st.checkbox("我同意将本次问题、对话上下文及工具读取的学习数据发送给 OpenAI", key="agent_consent")
+        consent = st.checkbox("我同意将本次问题、对话上下文及工具读取的学习数据发送给免费模型服务", key="agent_consent")
         submitted = st.form_submit_button("发送给学习助手", type="primary", disabled=not configured)
     if submitted:
         if not consent:
-            st.error("请先确认本次向 OpenAI 发送学习数据。输入内容已保留。")
+            st.error("请先确认本次向免费模型服务发送学习数据。输入内容已保留。")
         else:
             try:
                 with st.status("正在分析；修改只会生成提案…", expanded=True) as status:
                     def show_tool(name, state):
                         st.write(f"{'待确认提案' if state == 'pending' else '只读查询' if state == 'read' else '参数未通过'}：{name}")
-                    result = run_agent(auth, st.session_state.get("auth_token"), prompt, model=model, history=history, on_tool=show_tool)
+                    result = run_agent(auth, st.session_state.get("auth_token"), prompt, mode=mode, history=history, on_tool=show_tool)
                     status.update(label="已完成，修改仍需你确认", state="complete", expanded=False)
                 st.session_state["agent_history"] = (history + [{"role": "user", "content": prompt},
                     {"role": "assistant", "content": result.text}])[-12:]
                 st.session_state["agent_trace"] = result.trace
                 st.session_state["clear_submitted_fields"] = ("agent_prompt",)
                 st.rerun()
-            except (AIError, ValidationError, ConflictError) as exc:
+            except (AIError, ValidationError, ConflictError, QuotaExceeded) as exc:
                 st.error(str(exc))
     if st.session_state.get("agent_trace"):
         with st.expander("本次工具调用记录"):

@@ -14,12 +14,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from .agent import AIError, DEFAULT_MODEL, run_agent
+from .agent import AIError, MODE_LABELS, MODES, run_agent
+from .ai import DEFAULT_MODEL, ai_configured
 from .auth import AVATARS, AuthError
 from .database import ConfirmationRequired, ConflictError
 from .models import DAYS, DEVICES, LEVELS, PRIORITIES, SPEEDS, STATUSES, SUBJECTS, StudyProfile, TaskInput, ValidationError, iso_date
 from .progress import get_progress
 from .proposals import execute_proposal, list_proposals, reject_proposal
+from .quota import QuotaExceeded
 
 ROOT = Path(__file__).resolve().parent.parent
 COOKIE = "studypilot_session"
@@ -96,7 +98,9 @@ class PasswordChange(Confirm):
 
 class Chat(Body):
     prompt: str = Field(min_length=1, max_length=3000)
+    # 服务端固定使用免费模型；model 仅为兼容旧页面保留，不参与选择服务商。
     model: str = Field(default=DEFAULT_MODEL, max_length=100)
+    mode: str = Field(default="chat", max_length=20)
     history: list[dict] = Field(default_factory=list, max_length=12)
     consent: bool = False
 
@@ -161,6 +165,10 @@ def create_app(auth_factory=None):
     async def ai_error(request, error):
         return JSONResponse({"error": str(error)}, status_code=502)
 
+    @app.exception_handler(QuotaExceeded)
+    async def quota_error(request, error):
+        return JSONResponse({"error": str(error)}, status_code=429, headers={"Retry-After": "600"})
+
     @app.exception_handler(sqlite3.Error)
     async def storage_error(request, error):
         return JSONResponse({"error": "数据库暂时不可用，请检查云端连接配置或稍后重试。"}, status_code=503)
@@ -182,8 +190,8 @@ def create_app(auth_factory=None):
 
     def identity(auth, token, account):
         return dict(account=asdict(account), personal=auth.get_personal_profile(token), csrf=csrf(token),
-                    ai_configured=bool(os.getenv("OPENAI_API_KEY", "").strip()),
-                    default_model=os.getenv("OPENAI_MODEL", "").strip() or DEFAULT_MODEL,
+                    ai_configured=ai_configured(), default_model=DEFAULT_MODEL,
+                    modes=dict(values=list(MODES), labels=MODE_LABELS),
                     today=date.today().isoformat(),
                     options=dict(subjects=SUBJECTS, levels=LEVELS, speeds=SPEEDS, statuses=STATUSES,
                                  priorities=PRIORITIES, days=DAYS, devices=DEVICES, avatars=AVATARS))
@@ -221,7 +229,7 @@ def create_app(auth_factory=None):
 
     @app.get("/api/health")
     def health():
-        return dict(ok=True, version="0.5.0", database_configured=bool(os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or (os.getenv("STUDYPILOT_WEB_LOCAL")=="1" and not os.getenv("VERCEL"))))
+        return dict(ok=True, version="0.6.0", database_configured=bool(os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or (os.getenv("STUDYPILOT_WEB_LOCAL")=="1" and not os.getenv("VERCEL"))))
 
     @app.post("/api/register")
     def register(body: Register):
@@ -360,10 +368,10 @@ def create_app(auth_factory=None):
     @app.post("/api/agent")
     def agent(body: Chat, ctx=Depends(context)):
         if body.consent is not True:
-            raise ValidationError("请先同意向 OpenAI 发送本次问题、对话和工具读取的学习数据。")
+            raise ValidationError("请先同意向免费模型服务（智谱 GLM / 硅基流动）发送本次问题、对话和工具读取的学习数据。")
         if len(json.dumps(body.history, ensure_ascii=False)) > 20000:
             raise ValidationError("对话上下文过长，请清空后重试。")
-        result = run_agent(ctx[0], ctx[1], body.prompt, model=body.model, history=body.history)
+        result = run_agent(ctx[0], ctx[1], body.prompt, mode=body.mode, history=body.history)
         return asdict(result)
 
     @app.post("/api/proposals/{proposal_id}/execute")
@@ -379,7 +387,8 @@ def create_app(auth_factory=None):
     def development(ctx=Depends(context)):
         if ctx[2].role != "developer":
             raise HTTPException(403, "仅开发者可查看。")
-        return dict(completed=["本地账号和个人数据隔离", "规则式学习计划", "OpenAI 只读工具与提案确认", "Vercel Web 入口与 PostgreSQL 持久化"],
+        return dict(completed=["本地账号和个人数据隔离", "规则式学习计划", "免费国产模型只读工具与提案确认",
+                                "Vercel Web 入口与 PostgreSQL 持久化"],
                     pending=["目标里程碑完成率", "考试优先级自动调整"])
 
     return app

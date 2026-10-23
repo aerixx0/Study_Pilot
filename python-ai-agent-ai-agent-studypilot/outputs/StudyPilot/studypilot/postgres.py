@@ -38,6 +38,13 @@ CREATE TABLE IF NOT EXISTS account_profiles (
  account_id TEXT PRIMARY KEY REFERENCES accounts(id), nickname TEXT NOT NULL,
  avatar TEXT NOT NULL, bio TEXT NOT NULL DEFAULT '', version INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS ai_usage (
+ account_id TEXT NOT NULL, window_start BIGINT NOT NULL,
+ used INTEGER NOT NULL, PRIMARY KEY (account_id, window_start)
+);
+CREATE TABLE IF NOT EXISTS ai_site_usage (
+ day TEXT PRIMARY KEY, used INTEGER NOT NULL
+);
 """
 STUDY_DDL = """
 CREATE TABLE IF NOT EXISTS profile (

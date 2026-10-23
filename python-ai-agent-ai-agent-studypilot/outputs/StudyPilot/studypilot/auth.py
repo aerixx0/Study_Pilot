@@ -86,7 +86,7 @@ class AuthStore:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
             if version not in (0, 1):
                 raise ValidationError("账号数据库版本较新，请使用匹配版本的 StudyPilot。")
-            required = {"accounts", "auth_sessions", "auth_attempts", "account_profiles"}
+            required = {"accounts", "auth_sessions", "auth_attempts", "account_profiles", "ai_usage", "ai_site_usage"}
             existing = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             # 已有完整结构只读检查；旧版缺表仍进入兼容建表路径。
             if version == 1 and required <= existing:
@@ -111,6 +111,14 @@ class AuthStore:
                     account_id TEXT PRIMARY KEY REFERENCES accounts(id),
                     nickname TEXT NOT NULL, avatar TEXT NOT NULL,
                     bio TEXT NOT NULL DEFAULT '', version INTEGER NOT NULL
+                );
+                -- 免费 AI 额度：账号窗口计数和全站当日计数，只有数字，不含对话内容。
+                CREATE TABLE IF NOT EXISTS ai_usage (
+                    account_id TEXT NOT NULL, window_start INTEGER NOT NULL,
+                    used INTEGER NOT NULL, PRIMARY KEY (account_id, window_start)
+                );
+                CREATE TABLE IF NOT EXISTS ai_site_usage (
+                    day TEXT PRIMARY KEY, used INTEGER NOT NULL
                 );
                 PRAGMA user_version = 1;
             """)
@@ -343,6 +351,11 @@ class AuthStore:
             # 验证用的临时会话无论成功失败都撤销，不留下多余凭据。
             self.logout(checked_token)
         return next_code
+
+    def ai_meter(self):
+        """免费模型额度计数器；与账号同一份持久化存储。"""
+        from .quota import AIMeter
+        return AIMeter(self)
 
     def study_database(self, token):
         # 登录入口已刷新活动时间；打开学习库仍实时验证，但不重复写心跳。
