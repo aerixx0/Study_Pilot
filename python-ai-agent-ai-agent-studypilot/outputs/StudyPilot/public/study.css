@@ -4,6 +4,110 @@
 @keyframes enter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:700px){.shell{padding:22px 18px}.brand{font-size:29px}.quiet{display:none}.header-side{gap:10px}#navigation button{padding:10px 14px}.grid,.grid.three,.hero{grid-template-columns:1fr;gap:4px}.hero img{max-height:190px}.days{grid-template-columns:repeat(4,minmax(0,1fr))}.card{padding:19px}h1{letter-spacing:-1px}.page{padding:30px 0}.task-head{flex-wrap:wrap}.bubble.user{margin-left:5%}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* The same navigation moves between the learning workspace and conversation. */
+[hidden]{display:none!important}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.nav-icon{display:none;width:19px;height:19px;flex-shrink:0}
+.nav-label{display:inline-block}
+.nav-icon svg{display:block;width:100%;height:100%}
+.navigation-flight{position:fixed;pointer-events:none;background:var(--soft);border:1px solid var(--line);z-index:9}
+body[data-workspace-moving] #navigation{overflow:visible;background:transparent;border-color:transparent;z-index:10}
+body[data-workspace-moving] .nav-capsule{visibility:hidden;transition:none}
+body[data-workspace-moving] #navigation button[aria-current=page]{background:var(--accent-soft)}
+body[data-workspace=conversation]{--sidebar:248px;overflow:hidden}
+body[data-workspace=conversation] .shell{max-width:none;height:100dvh;padding:0}
+body[data-workspace=conversation] .shell::before{content:"";position:fixed;inset:0 auto 0 0;width:var(--sidebar);background:var(--soft);border-right:1px solid var(--line);z-index:3;animation:sidebar-in 480ms var(--ease-out) both}
+body[data-workspace=conversation] .masthead{position:fixed;top:28px;left:22px;width:calc(var(--sidebar) - 44px);padding:0;border:0;z-index:12}
+body[data-workspace=conversation] .brand{font-size:25px;letter-spacing:-1px;display:inline-block}
+body[data-workspace=conversation] .header-side{position:fixed;right:28px;top:19px;z-index:6}
+body[data-workspace=conversation] .quiet{display:none}
+body[data-workspace=conversation] .theme-switch{background:var(--bg);border-color:transparent}
+body[data-workspace=conversation] #account-bar{position:fixed;left:18px;bottom:20px;width:calc(var(--sidebar) - 36px);min-height:0;padding:16px 8px 0;border-top:1px solid var(--line);z-index:5;display:flex;flex-direction:column;align-items:start;gap:12px;overflow-wrap:anywhere;font-size:11px}
+body[data-workspace=conversation] #account-bar .btn{background:transparent;padding:5px 0;border:0;color:var(--muted)}
+#conversation-sidebar-tools{position:fixed;left:22px;top:89px;width:calc(var(--sidebar) - 44px);z-index:5}
+.sidebar-caption{display:block;font-size:10px;color:var(--muted);letter-spacing:2px;margin:0 0 12px 9px}
+.new-conversation{display:flex;align-items:center;gap:12px;width:100%;padding:10px 13px;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:var(--text);font-size:13px;transition:background 200ms,transform 240ms var(--ease-out)}
+.new-conversation span{font-size:21px;line-height:1}
+.new-conversation:hover{background:var(--accent-soft);transform:translateY(-1px)}
+body[data-workspace=conversation] #navigation{position:fixed;left:18px;top:191px;width:calc(var(--sidebar) - 36px);max-height:calc(100dvh - 345px);display:flex;flex-direction:column;gap:6px;padding:4px;border:1px solid transparent;background:transparent;border-radius:16px;overflow-x:hidden;overflow-y:auto;z-index:5}
+body[data-workspace=conversation] #navigation button{display:flex;align-items:center;gap:13px;width:100%;text-align:left;padding:12px 14px;font-size:13px;border-radius:12px}
+body[data-workspace=conversation] .nav-icon{display:inline-block}
+body[data-workspace=conversation] .nav-capsule{border-radius:12px;box-shadow:none}
+#conversation-topbar{position:fixed;left:calc(var(--sidebar) + 32px);right:138px;top:20px;height:44px;display:flex;align-items:center;justify-content:space-between;gap:15px;z-index:4;font-size:15px;pointer-events:none}
+#conversation-topbar>span{display:flex;gap:10px;align-items:center}
+#conversation-topbar small{font-size:12px}.topbar-dot{color:var(--muted)}
+#conversation-topbar button{pointer-events:auto;background:transparent;border-color:transparent;color:var(--muted);gap:12px}
+body[data-workspace=conversation] #content{margin-left:var(--sidebar);height:100dvh}
+body[data-workspace=conversation] .page{padding:0;height:100%}
+body[data-workspace=conversation] footer{display:none}
+body[data-workspace=conversation] #notice{position:fixed;top:70px;left:calc(var(--sidebar) + 28px);right:28px;z-index:15;pointer-events:none}
+body[data-workspace=conversation] #notice .notice{max-width:780px;margin:0 auto;box-shadow:var(--shadow);background:var(--surface);pointer-events:auto;font-size:12px}
+.conversation{height:100%;display:flex;flex-direction:column;min-width:0}
+.conversation-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:98px 32px 28px;scrollbar-width:thin}
+.conversation-thread{width:100%;max-width:780px;margin:0 auto}
+.conversation-welcome{padding:clamp(30px,8vh,100px) 0 28px;text-align:center}
+.conversation-mark{display:grid;place-items:center;width:52px;height:52px;border:1px solid var(--line);border-radius:18px;color:var(--accent);background:var(--surface);font:33px Georgia,serif;margin:0 auto 24px;box-shadow:var(--shadow)}
+.conversation-welcome .conversation-eyebrow{font:10px ui-monospace,monospace;letter-spacing:2px;margin:0 0 16px}
+.conversation-welcome h1{font-size:clamp(26px,3vw,38px);font-weight:550;letter-spacing:-1px;margin-bottom:14px}
+.conversation-welcome p{font-size:13px;color:var(--muted);margin-bottom:28px}
+.conversation-suggestions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.conversation-suggestions button{display:flex;align-items:center;gap:12px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:12px 16px;font-size:12px;transition:transform 260ms var(--ease-out),background 200ms,border-color 200ms}
+.conversation-suggestions button:hover{background:var(--accent-soft);border-color:var(--accent);transform:translateY(-3px)}
+.conversation-message{display:flex;gap:14px;align-items:flex-start;margin:22px 0 36px;font-size:14px;line-height:1.9}
+.conversation-message .message-body{white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.conversation-message.user{justify-content:flex-end}
+.conversation-message.user .message-body{background:var(--soft);border-radius:22px 22px 7px 22px;padding:13px 20px;max-width:85%}
+.message-mark{display:grid;place-items:center;flex-shrink:0;width:29px;height:29px;color:var(--accent);background:var(--accent-soft);border-radius:10px;font:23px Georgia,serif}
+.conversation-review{margin:28px 0}.conversation-review>h2{font-size:18px}.conversation-review>.muted{font-size:12px}
+.conversation-note{color:var(--muted);font-size:11px;text-align:center;margin:24px 0 0}
+.conversation-detail{background:var(--surface)}
+.composer-dock{flex:none;width:100%;max-width:844px;padding:0 32px 14px;margin:0 auto}
+.composer{padding:16px 18px 12px;border:1px solid var(--line);border-radius:25px;background:var(--surface);box-shadow:0 6px 32px #26252008;transition:border-color 240ms,box-shadow 240ms}
+.composer:focus-within{border-color:var(--accent);box-shadow:0 4px 28px #2625200d}
+.composer textarea{min-height:54px;max-height:180px;padding:0 3px;resize:vertical;background:transparent;border:0;border-radius:0;box-shadow:none;font-size:14px;line-height:1.7}
+.composer textarea:focus{box-shadow:none}
+.composer-toolbar{display:flex;gap:12px;align-items:center;min-width:0}
+.composer-mode{margin:0;max-width:50%}
+.composer-mode select{border:0;background:var(--soft);padding:6px 26px 6px 11px;border-radius:99px;font-size:11px;max-width:100%;cursor:pointer}
+.composer-toolbar #agent-status{font-size:11px;flex:1;text-align:right}
+button.composer-send{padding:9px;width:35px;height:35px;border-radius:50%;flex-shrink:0}
+.composer-send svg{width:20px;height:20px}
+.composer-consent{display:flex;align-items:center;gap:7px;font-size:10px;margin:11px 3px 0}
+.composer-consent input[type=checkbox]{width:13px;height:13px}
+.composer-disclosure{font-size:10px;line-height:1.7;color:var(--muted);text-align:center;max-width:700px;margin:10px auto 0}
+.conversation-availability{text-align:center;font-size:11px;color:var(--muted);margin:0 0 9px}
+#workspace-menu,#sidebar-backdrop{display:none}
+@keyframes sidebar-in{from{opacity:0}to{opacity:1}}
+@media(max-width:1100px) and (min-width:901px){body[data-workspace=conversation]{--sidebar:224px}.conversation-scroll{padding-left:24px;padding-right:24px}.composer-dock{padding-left:24px;padding-right:24px}#conversation-topbar small,.topbar-dot{display:none}}
+@media(max-width:900px){
+  body[data-workspace=conversation]{--sidebar:248px}
+  body[data-workspace=conversation] #content{margin-left:0}
+  body[data-workspace=conversation] .shell::before,body[data-workspace=conversation] .masthead,body[data-workspace=conversation] #account-bar,body[data-workspace=conversation] #navigation,#conversation-sidebar-tools{transform:translateX(-280px);visibility:hidden;transition:transform 420ms var(--ease-out),visibility 420ms}
+  body[data-workspace=conversation][data-sidebar-open=true] .shell::before,body[data-workspace=conversation][data-sidebar-open=true] .masthead,body[data-workspace=conversation][data-sidebar-open=true] #account-bar,body[data-workspace=conversation][data-sidebar-open=true] #navigation,body[data-workspace=conversation][data-sidebar-open=true] #conversation-sidebar-tools{transform:translateX(0);visibility:visible}
+  body[data-workspace=conversation] .shell::before{z-index:20}
+  body[data-workspace=conversation] .masthead,body[data-workspace=conversation] #navigation,body[data-workspace=conversation] #account-bar,#conversation-sidebar-tools{z-index:21}
+  body[data-workspace=conversation] .masthead,body[data-workspace=conversation][data-sidebar-open=true] .masthead{transform:none;visibility:visible;position:fixed;top:0;left:0;width:0;height:0;z-index:22}
+  body[data-workspace=conversation] .brand{position:fixed;left:22px;top:28px;transform:translateX(-280px);visibility:hidden;transition:transform 420ms var(--ease-out),visibility 420ms}
+  body[data-workspace=conversation][data-sidebar-open=true] .brand{transform:translateX(0);visibility:visible}
+  body[data-workspace=conversation] .header-side{right:12px;top:15px}
+  body[data-workspace=conversation] .theme-switch button{width:30px;height:30px;padding:6px}
+  #conversation-topbar{left:62px;right:104px;top:15px;height:40px}
+  #conversation-topbar small,.topbar-dot,#conversation-topbar button{display:none}
+  #workspace-menu{display:grid;place-items:center;position:fixed;left:16px;top:18px;z-index:8;background:transparent;border:0;color:var(--text);width:32px;height:32px;border-radius:9px;font-size:20px}
+  #sidebar-backdrop{display:block;position:fixed;inset:0;z-index:19;border:0;background:#0006;opacity:0;visibility:hidden;transition:opacity 420ms var(--ease-out),visibility 420ms}
+  body[data-sidebar-open=true] #sidebar-backdrop{opacity:1;visibility:visible}
+  .conversation-scroll{padding:82px 20px 20px}
+  .conversation-welcome{padding-top:clamp(30px,7vh,70px)}
+  .conversation-welcome h1{font-size:29px}
+  .conversation-suggestions{gap:8px}.conversation-suggestions button{padding:10px 12px}
+  .composer-dock{padding:0 14px max(12px,env(safe-area-inset-bottom))}
+  .composer{padding:14px;border-radius:22px}
+  .composer-disclosure{font-size:9px;margin-top:8px}
+  body[data-workspace=conversation] #notice{left:14px;right:14px;top:65px}
+}
+@media(max-height:650px){.conversation-welcome{padding-top:12px}.conversation-mark{margin-bottom:14px}.conversation-welcome p{margin-bottom:14px}body[data-workspace=conversation] #navigation{top:176px;max-height:calc(100dvh - 310px)}}
+body[data-workspace-moving] #navigation,body[data-workspace=conversation][data-workspace-moving] #navigation{overflow:visible;background:transparent;border-color:transparent;z-index:10}
 fieldset{border:0;padding:0;margin:0;min-width:0}button:disabled{cursor:not-allowed}
 
 /* Shared timing and interactions from the local StudyPilot interface. */

@@ -3,11 +3,13 @@ const $ = (q, root=document) => root.querySelector(q);
 const E = v => String(v ?? "").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let me=null, data=null, page="overview", authPage="login", recoveryCode="", history=[], preview=null, trace=[], sessions=[], authEpoch=0, accountServiceReady=true;
 const drafts=new Map();
-let renderedView=null, navigationRole=null;
-const names={overview:"学习概览",profile:"学习档案",tasks:"学习任务",plan:"学习计划",records:"学习记录",account:"账号设置",assistant:"AI 助手",development:"开发进度"};
+let renderedView=null, navigationRole=null, chatPending=false;
+const names={overview:"学习概览",profile:"学习档案",tasks:"学习任务",plan:"学习计划",records:"学习记录",account:"账号设置",assistant:"对话",development:"开发进度"};
 const labels={title:"任务标题",subject:"科目",due_date:"截止日期",estimated_minutes:"预计分钟",priority:"优先级",status:"状态",requires_computer:"需要电脑",notes:"备注",goals:"学习目标",weekly_hours:"每周小时",speed:"学习速度",preference:"学习偏好",max_session_minutes:"单次时长上限",levels:"各科基础",priorities:"科目优先级",availability:"每天时间和设备",study_date:"实际日期",duration:"实际分钟",note:"备注",minutes:"分钟",devices:"设备"};
 const actionNames={create_task:"创建任务",update_task:"修改任务",delete_task:"删除任务",update_profile:"修改学习档案",log_session:"保存真实学习记录",save_schedule:"保存每周计划"};
 const toolLabels={get_study_profile:"读取学习档案",list_tasks:"查看学习任务",get_task:"查看任务详情",get_study_records:"查看学习记录",get_progress:"统计学习进度",preview_weekly_plan:"预览每周计划",propose_task_create:"准备新任务建议",propose_task_update:"准备任务调整建议",propose_task_delete:"准备任务删除建议",propose_profile_update:"准备档案修改建议",propose_study_record:"准备学习记录建议",propose_weekly_plan:"准备每周计划建议"};
+const navIcons={overview:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',profile:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 8h6M9 12h6M9 16h3"/>',tasks:'<path d="m3 6 2 2 4-4M12 6h9M3 13h6M12 13h9M3 20h6M12 20h9"/>',plan:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 11h18M8 15h2M14 15h2"/>',records:'<path d="M4 20h16M7 16v-5M12 16V5M17 16V8"/>',account:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',assistant:'<path d="M21 11a8 8 0 0 1-8 8H7l-5 3 2-6a8 8 0 1 1 17-5Z"/><path d="M8 10h8M8 14h5"/>',development:'<path d="m8 6-6 6 6 6M16 6l6 6-6 6M14 3l-4 18"/>'};
+const navIcon=id=>'<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+navIcons[id]+'</svg></span>';
 function theme(mode){
   document.documentElement.dataset.theme=mode;
   document.querySelectorAll("[data-theme-choice]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.themeChoice===mode)));
@@ -32,7 +34,7 @@ async function api(path,method="GET",body){
   }
   return value;
 }
-function clearPrivate(){StudyMotion.reset();$("#content").replaceChildren();renderedView=null;authEpoch++;me=data=null;history=[];trace=[];preview=null;sessions=[];drafts.clear();page="overview";}
+function clearPrivate(){StudyMotion.workspace(false,false);StudyMotion.reset();$("#content").replaceChildren();renderedView=null;authEpoch++;chatPending=false;me=data=null;history=[];trace=[];preview=null;sessions=[];drafts.clear();page="overview";}
 function saveDrafts(){
   document.querySelectorAll("#content > .page:not(.page-leaving) form").forEach(form=>{
     const values={};form.querySelectorAll("input,select,textarea").forEach(input=>{if(input.name)values[input.name]=input.type==="checkbox"?input.checked:input.value;});
@@ -72,12 +74,14 @@ function render(){
   nav.hidden=!me;
   if(role!==navigationRole){
     navigationRole=role;
-    nav.innerHTML=me?'<span class="nav-capsule" aria-hidden="true"></span>'+Object.entries(names).filter(([id])=>id!=="development"||role==="developer").map(([id,label])=>'<button data-page="'+id+'">'+label+'</button>').join(""):"";
+    nav.innerHTML=me?'<span class="nav-capsule" aria-hidden="true"></span>'+Object.entries(names).filter(([id])=>id!=="development"||role==="developer").map(([id,label])=>'<button data-page="'+id+'">'+navIcon(id)+'<span class="nav-label">'+label+'</span></button>').join(""):"";
   }
   nav.querySelectorAll("button[data-page]").forEach(button=>{
     if(button.dataset.page===page)button.setAttribute("aria-current","page");
     else button.removeAttribute("aria-current");
   });
+  StudyMotion.workspace(Boolean(me&&page==="assistant"));
+  document.querySelectorAll('#conversation-sidebar-tools [data-action="clear-chat"]').forEach(button=>button.disabled=chatPending);
   StudyMotion.navigation();
   const renderers={overview:overview,profile:profile,tasks:tasks,plan:plan,records:records,account:account,assistant:assistant,development:development};
   const view=recoveryCode?"recovery":me&&data?"user:"+me.account.id+":"+page:"auth:"+authPage;
@@ -86,6 +90,10 @@ function render(){
   StudyMotion.replace($("#content"),next,view!==renderedView);
   renderedView=view;
   restoreDrafts();
+  if(page==="assistant"&&me){
+    $("#conversation-prompt").readOnly=chatPending;
+    const stream=$(".conversation-scroll");if(stream&&history.length)stream.scrollTop=stream.scrollHeight;
+  }
 }
 function login(){
   const tabs='<div class="auth-tabs">'+[["login","登录"],["register","注册账号"],["recover","找回密码"]].map(([id,title])=>'<button class="btn small" data-auth-page="'+id+'" aria-pressed="'+(authPage===id)+'">'+title+'</button>').join("")+'</div>';
@@ -101,7 +109,7 @@ function overview(){
 }
 function profile(){
   const p=data.profile,o=me.options;
-  return head("02 / YOUR LEARNING PROFILE","制定适合你的学习安排","设置学习目标、可用时间和设备，为任务规划提供依据。目标可暂时留空。")+(data.profile_version?"":'<div class="info">请核对时间与设备设置，确认保存后用于生成学习计划。</div>')+'<form id="profile-'+data.profile_version+'" data-kind="profile" data-version="'+data.profile_version+'" class="card"><h3>你的学习目标</h3>'+area("goals","学习目标",p.goals,'maxlength="2000" placeholder="写下希望达成的学习目标，也可以暂时留空"')+'<small>目标可随时编辑或清空，确认保存后生效。也可与 AI 助手讨论目标建议。</small><h2>时间与偏好</h2><div class="grid">'+input("weekly_hours","每周小时",p.weekly_hours,"number",'min="0.1" max="40" step="0.1" required')+select("speed","学习速度",o.speeds,p.speed)+input("max_session_minutes","单次学习时长上限（分钟）",p.max_session_minutes,"number",'min="1" max="180" required')+input("preference","学习偏好",p.preference,"text",'maxlength="500"')+'</div><h2>各科基础和优先级</h2>'+o.subjects.map((s,i)=>'<div class="grid">'+select("level_"+i,s+" · 当前水平",o.levels,p.levels[s])+select("priority_"+i,s+" · 优先级",o.priorities,p.priorities[s])+'</div>').join("")+'<h2>每天的时间和设备</h2><small>各天分钟总和应至少覆盖每周预算。</small>'+o.days.map((d,i)=>'<div class="card"><h3>'+d+'</h3>'+input("day_"+i,"可用分钟",p.availability[d].minutes,"number",'min="0" max="1440" required')+'<div class="checks">'+o.devices.map((device,j)=>check("device_"+i+"_"+j,device,p.availability[d].devices.includes(device))).join("")+'</div></div>').join("")+confirm()+submit("保存学习档案")+'</form>';
+  return head("02 / YOUR LEARNING PROFILE","制定适合你的学习安排","设置学习目标、可用时间和设备，为任务规划提供依据。目标可暂时留空。")+(data.profile_version?"":'<div class="info">请核对时间与设备设置，确认保存后用于生成学习计划。</div>')+'<form id="profile-'+data.profile_version+'" data-kind="profile" data-version="'+data.profile_version+'" class="card"><h3>你的学习目标</h3>'+area("goals","学习目标",p.goals,'maxlength="2000" placeholder="写下希望达成的学习目标，也可以暂时留空"')+'<small>目标可随时编辑或清空，确认保存后生效。也可在对话中讨论目标建议。</small><h2>时间与偏好</h2><div class="grid">'+input("weekly_hours","每周小时",p.weekly_hours,"number",'min="0.1" max="40" step="0.1" required')+select("speed","学习速度",o.speeds,p.speed)+input("max_session_minutes","单次学习时长上限（分钟）",p.max_session_minutes,"number",'min="1" max="180" required')+input("preference","学习偏好",p.preference,"text",'maxlength="500"')+'</div><h2>各科基础和优先级</h2>'+o.subjects.map((s,i)=>'<div class="grid">'+select("level_"+i,s+" · 当前水平",o.levels,p.levels[s])+select("priority_"+i,s+" · 优先级",o.priorities,p.priorities[s])+'</div>').join("")+'<h2>每天的时间和设备</h2><small>各天分钟总和应至少覆盖每周预算。</small>'+o.days.map((d,i)=>'<div class="card"><h3>'+d+'</h3>'+input("day_"+i,"可用分钟",p.availability[d].minutes,"number",'min="0" max="1440" required')+'<div class="checks">'+o.devices.map((device,j)=>check("device_"+i+"_"+j,device,p.availability[d].devices.includes(device))).join("")+'</div></div>').join("")+confirm()+submit("保存学习档案")+'</form>';
 }
 function taskFields(t={}){
   const o=me.options;
@@ -135,7 +143,11 @@ function proposal(p){
 }
 function assistant(){
   const pending=data.proposals.filter(p=>p.state==="pending"),applied=data.proposals.filter(p=>p.state==="applied").slice(0,5);
-  return head("AI / YOUR STUDY ASSISTANT","你的 AI 学习助手","了解学习进度、梳理目标与计划，核对建议后再应用更改。")+(me.ai_configured?'<div class="info">AI 助手由智谱或硅基流动提供模型服务。经你同意后，本次问题、对话上下文及相关学习资料将发送至模型服务商，不包含账号凭据。AI 建议可能有误，请核对后使用。</div>':'<div class="info">AI 助手暂未开放。你仍可管理学习档案、任务、计划，并处理已有建议。</div>')+'<div class="chat">'+history.map(m=>'<div class="bubble '+m.role+'"><span class="chat-label">'+(m.role==="user"?"你":"学习助手")+'</span>'+E(m.content)+'</div>').join("")+'</div><div class="actions"><button class="btn small" data-action="clear-chat">清空对话</button></div><form id="agent-chat" data-kind="agent-chat" class="card">'+'<label>对话模式<select name="mode">'+me.modes.values.map(v=>'<option value="'+E(v)+'"'+(v==="chat"?" selected":"")+'>'+E(me.modes.labels[v]||v)+'</option>').join("")+'</select></label>'+area("prompt","你想查询或调整什么？","","maxlength=\"3000\" placeholder=\"例如：总结本周学习进度，或根据我的可用时间提出计划建议。\" required")+check("consent","我同意将本次问题、对话上下文及相关学习资料发送至上述模型服务商")+'<div class="actions"><button type="submit"'+(me.ai_configured?"":" disabled")+'>发送给学习助手</button><small id="agent-status"></small></div></form><small>对话在刷新或退出后清除。待确认建议和应用记录保存在你的账号中，所有更改均需在建议卡片中确认。</small>'+(trace.length?'<details><summary>本次处理记录</summary>'+table(["工具","状态"],trace.map(t=>[E(toolLabels[t.tool]||"处理学习请求"),E(t.state==="pending"?"待确认提案":t.state==="read"?"只读查询":"参数未通过")]))+'</details>':"")+'<h2>待确认的修改</h2>'+(!pending.length?empty("暂无待确认提案。只读查询不会修改数据。"):pending.map(proposal).join(""))+(applied.length?'<details><summary>最近执行记录</summary>'+table(["提案","操作","执行时间"],applied.map(p=>[E(p.id.slice(0,8)),E(actionNames[p.action]),E(new Date(p.applied_at*1000).toLocaleString())]))+'</details>':"");
+  const suggestions=[['总结本周进度','帮我总结本周的学习进度，并建议下一步。','chat'],['梳理学习目标','和我一起梳理学习目标，先讨论，不要直接修改。','goal_coach'],['安排每周计划','根据我的任务和可用时间生成本周计划建议。','plan_builder']];
+  const welcome=!history.length?'<div class="conversation-welcome"><div class="conversation-mark" aria-hidden="true">↗</div><p class="conversation-eyebrow">YOUR NEXT CHAPTER</p><h1>今天，想推进什么？</h1><p>聊聊目标，理清计划。让每一步都有方向。</p><div class="conversation-suggestions">'+suggestions.map(([label,prompt,mode])=>'<button type="button" data-prompt="'+E(prompt)+'" data-mode="'+mode+'">'+E(label)+'<span aria-hidden="true">↗</span></button>').join("")+'</div></div>':"";
+  const messages=history.map(m=>'<article class="conversation-message '+m.role+'">'+(m.role==="assistant"?'<div class="message-mark" aria-hidden="true">↗</div>':"")+'<div class="message-body"><span class="sr-only">'+(m.role==="user"?"你":"StudyPilot")+'</span>'+E(m.content)+'</div></article>').join("");
+  const review=pending.length?'<section class="conversation-review"><h2>待确认的修改 <span>'+pending.length+'</span></h2><p class="muted">核对建议后，在卡片中确认应用。</p>'+pending.map(proposal).join("")+'</section>':"";
+  return '<div class="conversation"><div class="conversation-scroll" tabindex="0" aria-label="对话内容"><div class="conversation-thread">'+welcome+'<div class="conversation-messages" role="log" aria-live="polite">'+messages+'</div>'+review+(trace.length?'<details class="conversation-detail"><summary>本次处理记录</summary>'+table(["操作","状态"],trace.map(t=>[E(toolLabels[t.tool]||"处理学习请求"),E(t.state==="pending"?"待确认提案":t.state==="read"?"只读查询":"参数未通过")]))+'</details>':"")+(applied.length?'<details class="conversation-detail"><summary>最近应用记录</summary>'+table(["建议","操作","时间"],applied.map(p=>[E(p.id.slice(0,8)),E(actionNames[p.action]),E(new Date(p.applied_at*1000).toLocaleString())]))+'</details>':"")+(!pending.length&&history.length?'<p class="conversation-note">当前没有待确认的修改。</p>':"")+'</div></div><div class="composer-dock">'+(!me.ai_configured?'<p class="conversation-availability">对话服务暂未开放，学习管理功能仍可正常使用。</p>':"")+'<form id="agent-chat" data-kind="agent-chat" class="composer"><label class="sr-only" for="conversation-prompt">发送消息</label><textarea id="conversation-prompt" name="prompt" rows="2" maxlength="3000" placeholder="向 StudyPilot 提问" required></textarea><div class="composer-toolbar"><label class="composer-mode"><span class="sr-only">对话模式</span><select name="mode">'+me.modes.values.map(v=>'<option value="'+E(v)+'">'+E(me.modes.labels[v]||v)+'</option>').join("")+'</select></label><small id="agent-status" role="status">'+(chatPending?"正在思考…":"")+'</small><button class="composer-send" type="submit" aria-label="发送消息" title="发送消息"'+(me.ai_configured&&!chatPending?"":" disabled")+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div><label class="composer-consent"><input type="checkbox" name="consent">我同意本次对话使用相关学习资料</label></form><p class="composer-disclosure">经你同意，问题、上下文及相关学习资料将发送至智谱或硅基流动，不含账号凭据。AI 建议可能有误，修改仍需确认。对话在刷新或退出后清除。</p></div></div>';
 }
 function development(){
   return head("DEV / DEVELOPMENT PROGRESS","功能与维护","查看已启用功能与后续维护事项。此页面仅对开发者开放。")+'<div class="card"><h3>已完成</h3><p>账号与个人资料管理、学习档案、任务与记录、每周计划、进度统计、AI 学习建议与用户确认。</p><h3>后续维护事项</h3><p>目标里程碑完成率、考试优先级自动调整。</p></div>';
@@ -172,7 +184,11 @@ async function submitForm(form){
   }else if(kind==="revoke-sessions"){path="/sessions/revoke";success="其他会话已退出。";
   }else if(kind==="proposal-execute"){path="/proposals/"+form.dataset.id+"/execute";success="提案已执行并保存；重复提交不会重复写入。";
   }else if(kind==="agent-chat"){
-    const status=$("#agent-status");if(status)status.textContent="正在分析；修改只会生成提案…";
+    if(chatPending)throw new Error("正在生成答复，请稍候。");
+    chatPending=true;
+    form.elements.prompt.readOnly=true;
+    document.querySelectorAll('[data-action="clear-chat"]').forEach(button=>button.disabled=true);
+    const status=$("#agent-status");if(status)status.textContent="正在思考…";
     let result;
     try{result=await api("/agent","POST",{prompt:get("prompt"),mode:get("mode")||"chat",consent:checked("consent"),history});}
     catch(error){try{data=await api("/state");saveDrafts();render();}catch{}throw error;}
@@ -188,23 +204,41 @@ async function submitForm(form){
 }
 document.addEventListener("submit",async event=>{
   const form=event.target;if(!(form instanceof HTMLFormElement))return;
-  event.preventDefault();const buttons=[...form.querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);notice("");
+  event.preventDefault();if(form.dataset.kind==="agent-chat"&&chatPending)return;
+  const submitEpoch=authEpoch,buttons=[...form.querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);notice("");
   try{await submitForm(form);}catch(error){notice(error.message,"error");}
-  finally{buttons.forEach(b=>b.disabled=false);const status=$("#agent-status");if(status)status.textContent="";}
+  finally{buttons.forEach(b=>b.disabled=false);if(form.dataset.kind==="agent-chat"&&submitEpoch===authEpoch){chatPending=false;document.querySelectorAll('[data-action="clear-chat"]').forEach(button=>button.disabled=false);const prompt=$("#conversation-prompt");if(prompt)prompt.readOnly=false;const send=$('.composer-send');if(send)send.disabled=!me?.ai_configured;const status=$("#agent-status");if(status)status.textContent="";}}
+});
+document.addEventListener("keydown",event=>{
+  if(event.key==="Escape"&&document.body.dataset.sidebarOpen==="true"){
+    delete document.body.dataset.sidebarOpen;$("#workspace-menu").setAttribute("aria-expanded","false");$("#workspace-menu").focus();
+  }
+  if(event.target.id==="conversation-prompt"&&event.key==="Enter"&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229){
+    event.preventDefault();const send=$(".composer-send");if(send&&!send.disabled)event.target.form.requestSubmit();
+  }
 });
 document.addEventListener("click",async event=>{
   const button=event.target.closest("button");if(!button)return;
   try{
-    if(button.dataset.themeChoice){theme(button.dataset.themeChoice);return;}
+    if(button.dataset.action==="toggle-sidebar"){
+      const open=document.body.dataset.sidebarOpen!=="true";document.body.dataset.sidebarOpen=String(open);
+      $("#workspace-menu").setAttribute("aria-expanded",String(open));return;
+    }
     if(button.closest(".page-leaving"))return;
-    if(button.dataset.page){if(page===button.dataset.page)return;saveDrafts();page=button.dataset.page;notice("");render();return;}
+    if(button.dataset.prompt){
+      if(chatPending)return;
+      const form=$("#agent-chat");form.elements.prompt.value=button.dataset.prompt;form.elements.mode.value=button.dataset.mode;
+      form.elements.prompt.focus();return;
+    }
+    if(button.dataset.themeChoice){theme(button.dataset.themeChoice);return;}
+    if(button.dataset.page){delete document.body.dataset.sidebarOpen;$("#workspace-menu").setAttribute("aria-expanded","false");if(page===button.dataset.page)return;saveDrafts();page=button.dataset.page;notice("");render();return;}
     if(button.dataset.authPage){if(authPage===button.dataset.authPage)return;saveDrafts();authPage=button.dataset.authPage;notice("");render();return;}
     if(button.dataset.reject){button.disabled=true;await api("/proposals/"+button.dataset.reject+"/reject","POST",{});saveDrafts();await refresh();render();notice("提案已忽略，没有修改学习数据。");return;}
     switch(button.dataset.action){
       case "dismiss":notice("");break;
       case "logout":await api("/logout","POST",{});clearPrivate();render();notice("已退出登录。");break;
       case "saved-recovery":recoveryCode="";authPage="login";render();notice("");break;
-      case "clear-chat":history=[];trace=[];saveDrafts();render();break;
+      case "clear-chat":if(chatPending)break;history=[];trace=[];drafts.delete("agent-chat");delete document.body.dataset.sidebarOpen;$("#workspace-menu").setAttribute("aria-expanded","false");render();$("#conversation-prompt")?.focus();break;
       case "load-sessions":sessions=await api("/sessions");$("#session-list").innerHTML=sessionList();break;
     }
   }catch(error){notice(error.message,"error");button.disabled=false;}
