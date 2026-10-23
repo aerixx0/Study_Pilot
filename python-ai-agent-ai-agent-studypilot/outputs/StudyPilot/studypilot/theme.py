@@ -59,10 +59,10 @@ def availability_strip(profile, saved):
         hours = f"{amount / 60:g} 小时" if amount else "留给日常"
         devices = " / ".join(slot["devices"]) if amount else "无额外学习时间"
         cells.append(f'<div class="day-cell {"available" if amount else "rest"}"><span>{escape(day)}</span><strong>{hours}</strong><small>{escape(devices)}</small></div>')
-    label = "已保存的学习档案" if saved else "默认档案草稿 · 可修改"
+    label = "已保存的学习档案" if saved else "待完善的学习设置"
     st.markdown(f'<div class="rhythm-header"><h3>按你的节奏来。</h3><span>每周 {profile.weekly_hours:g} 小时 · {label}</span></div><div class="week-strip">{"".join(cells)}</div>', unsafe_allow_html=True)
 
 
 def footer(ai_configured):
-    status = "AI 已配置 · 修改先审阅" if ai_configured else "AI 未启用 · 本地功能正常可用"
-    st.markdown(f'<div class="site-footer"><span class="footer-brand">StudyPilot.</span><span>本地保存 · 修改需确认</span><span class="footer-status">{status}</span></div>', unsafe_allow_html=True)
+    status = "AI 助手已开放 · 建议需确认" if ai_configured else "AI 助手暂未开放 · 学习管理正常可用"
+    st.markdown(f'<div class="site-footer"><span class="footer-brand">StudyPilot.</span><span>学习目标 · 任务计划 · 进度记录</span><span class="footer-status">{status}</span></div>', unsafe_allow_html=True)

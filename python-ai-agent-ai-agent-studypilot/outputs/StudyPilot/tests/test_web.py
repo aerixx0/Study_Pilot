@@ -52,8 +52,8 @@ class WebTests(unittest.TestCase):
             self.assertEqual(fresh.get("/learning-map.svg").status_code,200)
             self.assertFalse(fresh.get("/api/health").json()["database_configured"])
             response = fresh.get("/api/me")
-            self.assertEqual(response.status_code,400)
-            self.assertIn("DATABASE_URL",response.json()["error"])
+            self.assertEqual(response.status_code,503)
+            self.assertNotIn("DATABASE_URL",response.json()["error"])
         fresh.close()
 
     def test_cookie_csrf_and_origin_guard(self):

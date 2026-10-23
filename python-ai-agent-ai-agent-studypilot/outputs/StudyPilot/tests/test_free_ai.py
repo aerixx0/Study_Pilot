@@ -192,7 +192,7 @@ class ProviderTests(Base):
             with self.assertRaises(AIError) as caught:
                 run_agent(self.auth, self.token, "看看本周情况", transport=transport)
         message = str(caught.exception)
-        self.assertIn("免费模型暂时不可用", message)
+        self.assertIn("AI 服务暂时不可用", message)
         self.assertIn("智谱", message)
         self.assertIn("硅基流动", message)
         self.assertNotIn(KEYS["zhipu"], message)
@@ -388,7 +388,7 @@ class WebTests(Base):
                 patch("studypilot.ai.build_opener", lambda *handlers: FakeOpener(http_error(429), http_error(500))):
             response = self.call({"prompt": "帮我新增任务", "consent": True, "mode": "chat"})
         self.assertEqual(response.status_code, 502, response.text)
-        self.assertIn("免费模型暂时不可用", response.json()["error"])
+        self.assertIn("AI 服务暂时不可用", response.json()["error"])
         self.assertEqual(self.db.get_tasks(), [])
         self.assertEqual(list_proposals(self.auth, self.token), [])
 

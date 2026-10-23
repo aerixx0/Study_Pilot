@@ -59,20 +59,20 @@ class AppTests(unittest.TestCase):
         self.app.run()
         self.assertEqual(len(self.app.exception), 0)
         self.assertEqual(self.app.radio(key="navigation").value, "学习概览")
-        self.assertFalse(any("一步一步，成为 Agent" in item.value for item in self.app.markdown))
+        self.assertFalse(any("功能与维护" in item.value for item in self.app.markdown))
 
     def test_developer_mode_enables_page_and_revocation_returns_to_overview(self):
         self.auth.set_role("learner", "developer", confirmed=True)
         self.app.run()
         self.assertIn("开发进度", self.app.radio(key="navigation").options)
         self.navigate("开发进度")
-        self.assertTrue(any("一步一步，成为 Agent" in item.value for item in self.app.markdown))
+        self.assertTrue(any("功能与维护" in item.value for item in self.app.markdown))
         self.auth.set_role("learner", "user", confirmed=True)
         self.app.run()
         self.assertEqual(len(self.app.exception), 0)
         self.assertEqual(self.app.radio(key="navigation").value, "学习概览")
         self.assertNotIn("开发进度", self.app.radio(key="navigation").options)
-        self.assertFalse(any("一步一步，成为 Agent" in item.value for item in self.app.markdown))
+        self.assertFalse(any("功能与维护" in item.value for item in self.app.markdown))
 
     def test_development_mode_requires_explicit_server_configuration(self):
         for value in ("0", "1", "false", "true", "developer"):
@@ -182,7 +182,7 @@ class AppTests(unittest.TestCase):
         self.navigate("学习档案")
         goal_input = self.app.text_area(key="profile_goals_0")
         self.assertEqual(goal_input.value, "")
-        self.assertIn("例如：提高数学解题能力", goal_input.proto.placeholder)
+        self.assertIn("学习目标", goal_input.proto.placeholder)
         self.assertEqual(Database(self.db_path).get_study_profile()[1], 0)
         self.confirm_profile()
         profile, version = Database(self.db_path).get_study_profile()
@@ -226,7 +226,7 @@ class AppTests(unittest.TestCase):
         db.save_profile(StudyProfile(goals=legacy), expected_version=0, confirmed=True)
         self.navigate("学习档案")
         self.assertEqual(self.app.text_area(key="profile_goals_1").value, legacy)
-        self.assertTrue(any("无法判断是否是你的选择" in item.value for item in self.app.caption))
+        self.assertTrue(any("目标由你决定" in item.value for item in self.app.caption))
         self.assertEqual(db.get_study_profile()[1], 1)
         self.assertEqual(db.get_study_profile()[0].goals, legacy)
 
@@ -267,7 +267,7 @@ class AppTests(unittest.TestCase):
     def test_configured_key_is_never_displayed_or_called(self):
         with patch.dict(os.environ, {"ZHIPU_API_KEY": "test-only-secret-marker"}):
             self.app.run()
-        self.assertTrue(any("已配置免费模型密钥" in item.value for item in self.app.info))
+        self.assertTrue(any("AI 助手已开放" in item.value for item in self.app.info))
         visible_text = " ".join(item.value for collection in (self.app.info, self.app.markdown, self.app.caption) for item in collection)
         self.assertNotIn("test-only-secret-marker", visible_text)
 

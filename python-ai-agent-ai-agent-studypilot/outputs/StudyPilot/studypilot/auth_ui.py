@@ -36,7 +36,7 @@ def login_gate(auth):
     if token:
         clear_account_state()
         st.session_state["auth_notice"] = "登录已过期或已在其他位置退出，请重新登录。"
-    page_intro("HELLO", "为你的学习，留一个位置", "登录自己的账号，让目标和每一步努力都有归处。", "YOUR OWN LEARNING SPACE")
+    page_intro("HELLO", "欢迎使用 StudyPilot", "登录账号，管理学习目标、任务和进度。", "YOUR OWN LEARNING SPACE")
     if "auth_notice" in st.session_state:
         st.info(st.session_state.pop("auth_notice"))
     receipt = st.session_state.get("recovery_receipt")
@@ -68,14 +68,14 @@ def login_gate(auth):
                 username = st.text_input("用户名", max_chars=USERNAME_MAX_LENGTH, key="register_username", help="1–64 个字符，支持中文、字母、数字、空格和常用符号；首尾空格自动去除，英文不区分大小写。无需真实姓名。")
                 password = st.text_input("设置密码", type="password", max_chars=128, key="register_password", help="15–128 个字符，建议使用容易记住的长短语。")
                 repeat = st.text_input("再次输入密码", type="password", max_chars=128, key="register_repeat")
-                confirmed = st.checkbox("我确认创建自己的本地账号", key="register_confirm")
+                confirmed = st.checkbox("我确认创建账号", key="register_confirm")
                 if st.form_submit_button("创建账号", type="primary", width="stretch"):
                     matching_passwords(password, repeat)
                     account, code = auth.register(username, password, confirmed=confirmed)
                     show_recovery_receipt(account.username, code, "账号已创建。请先保存恢复码，再登录。")
-            st.caption("只需要用户名和密码，不需要邮箱、手机号或学校账号。每个账号从空白的学习目标开始。")
+            st.caption("使用用户名和密码创建账号。注册后请妥善保存恢复码，用于找回密码。")
         else:
-            st.caption("输入注册或上次改密时保存的恢复码。没有恢复码时，本版无法通过邮箱或短信找回。")
+            st.caption("输入注册或上次改密时保存的恢复码。密码找回目前仅支持恢复码，不支持邮箱或短信验证。")
             with st.form("reset_form", clear_on_submit=False):
                 username = st.text_input("用户名", max_chars=USERNAME_MAX_LENGTH, key="reset_username")
                 code = st.text_input("恢复码", type="password", max_chars=128, key="reset_code")
@@ -154,7 +154,7 @@ def account_settings(auth, account):
                 st.error(str(exc))
     st.caption("忘记或遗失恢复码时，可以在记得当前密码的情况下，通过更新密码获取新的恢复码。")
     with st.expander("登录会话管理"):
-        st.caption("这里显示本地网站的登录会话，不代表独立物理设备。")
+        st.caption("查看当前有效的登录会话；同一设备可能存在多个会话。")
         sessions = auth.get_sessions(st.session_state.get("auth_token"))
         st.dataframe([{"会话": "当前会话" if session["current"] else "其他会话",
                        "登录时间": datetime.fromtimestamp(session["created_at"]).strftime("%Y-%m-%d %H:%M"),
@@ -170,11 +170,11 @@ def account_settings(auth, account):
                 except (AuthError, ConfirmationRequired) as exc:
                     st.error(str(exc))
     with st.expander("个人数据与导出"):
-        st.caption("导出个人资料、学习档案、任务、真实学习记录和已保存计划。文件不含密码、恢复码或登录令牌。JSON 可供查阅；完整恢复仍请备份本地 data 目录。")
+        st.caption("导出个人资料、学习档案、任务、真实学习记录和已保存计划。文件不含密码、恢复码或登录令牌。导出文件可供查阅和留存，目前不支持导入恢复。")
         # 在点击时重新验证并生成；闭合面板与普通重绘不读取全部个人数据。
         token = st.session_state.get("auth_token")
         def export_on_download():
             return json.dumps(auth.export_account(token), ensure_ascii=False, indent=2).encode("utf-8")
         st.download_button("导出我的数据（JSON）", export_on_download,
                            file_name="studypilot-data.json", mime="application/json", on_click="ignore")
-    st.caption("StudyPilot v0.4.0 · 学习管理、规则排课与 AI 修改提案")
+    st.caption("StudyPilot · 学习目标、任务计划与进度记录")

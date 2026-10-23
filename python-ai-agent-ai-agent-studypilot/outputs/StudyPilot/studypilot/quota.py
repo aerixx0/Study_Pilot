@@ -62,7 +62,7 @@ class AIMeter:
             site = conn.execute("SELECT used FROM ai_site_usage WHERE day=?", (day,)).fetchone()
             total = site["used"] if site else 0
             if total >= limits["site_limit"]:
-                raise QuotaExceeded("今天全站免费 AI 额度已用完，请明天再试；本地学习功能不受影响。")
+                raise QuotaExceeded("今天全站 AI 使用额度已达上限，请明天再试；其他学习功能仍可正常使用。")
             if row:
                 conn.execute("UPDATE ai_usage SET used=used+1 WHERE account_id=? AND window_start=?",
                              (account.id, window))

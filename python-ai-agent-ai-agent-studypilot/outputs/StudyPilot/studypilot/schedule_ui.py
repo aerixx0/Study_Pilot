@@ -44,7 +44,7 @@ def render_plan(plan):
 
 def schedule_page(db):
     page_intro("PLAN", "给这一周，一个安排", "在真实可用的时间里，一步步完成任务。", "YOUR WEEKLY PLAN")
-    st.caption("按截止日期优先，同期限按任务和科目优先级安排；需要电脑的任务只放在有电脑的日期。单次安排不超过档案中的时长上限。普通任务优先使用无电脑日；这是一套固定规则，不保证全局最优。")
+    st.caption("计划优先安排临近截止日期的任务，并结合科目优先级、可用设备和单次学习时长。你可核对安排后决定是否保存。")
     st.info("每周预算包含当周已记录的真实用时；过去日期不再新增安排。其他周已保存的未来安排会预留任务时长。计划不会自动完成任务或记入真实学习时间。")
     selected = st.date_input("选择计划所在周", value=date.today(), key="schedule_week")
     start, end = week_bounds(selected)

@@ -147,6 +147,8 @@ def create_app(auth_factory=None):
 
     @app.exception_handler(ValidationError)
     async def invalid(request, error):
+        if "DATABASE_URL" in str(error):
+            return JSONResponse({"error": "账号服务暂时不可用，请稍后重试。"}, status_code=503)
         return JSONResponse({"error": str(error)}, status_code=400)
 
     @app.exception_handler(ConfirmationRequired)
@@ -171,7 +173,7 @@ def create_app(auth_factory=None):
 
     @app.exception_handler(sqlite3.Error)
     async def storage_error(request, error):
-        return JSONResponse({"error": "数据库暂时不可用，请检查云端连接配置或稍后重试。"}, status_code=503)
+        return JSONResponse({"error": "服务暂时不可用，请稍后重试。若问题持续，请联系维护人员。"}, status_code=503)
 
     @app.exception_handler(RequestValidationError)
     async def body_error(request, error):
@@ -368,7 +370,7 @@ def create_app(auth_factory=None):
     @app.post("/api/agent")
     def agent(body: Chat, ctx=Depends(context)):
         if body.consent is not True:
-            raise ValidationError("请先同意向免费模型服务（智谱 GLM / 硅基流动）发送本次问题、对话和工具读取的学习数据。")
+            raise ValidationError("请先同意将本次问题、对话上下文及相关学习资料发送至上述模型服务商。")
         if len(json.dumps(body.history, ensure_ascii=False)) > 20000:
             raise ValidationError("对话上下文过长，请清空后重试。")
         result = run_agent(ctx[0], ctx[1], body.prompt, mode=body.mode, history=body.history)

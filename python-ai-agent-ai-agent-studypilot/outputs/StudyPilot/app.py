@@ -21,7 +21,7 @@ from studypilot.theme import apply_theme, availability_strip, empty_state, foote
 
 ROOT = Path(__file__).resolve().parent
 # 这两个常量只用于界面提示；绝不作为输入值或数据库写入的兜底值。
-GOAL_PLACEHOLDER = "例如：提高数学解题能力\n例如：提升英语阅读水平\n例如：学习 Python 编程基础\n例如：了解 AI Agent 的基本原理"
+GOAL_PLACEHOLDER = "写下希望达成的学习目标，也可以暂时留空。"
 LEGACY_GOALS_EXAMPLE = "学习 Python 基础；强化数学和英语；逐步了解 AI Agent。"
 
 
@@ -37,7 +37,7 @@ def commit(action, success_message, *, clear_fields=()):
     except (ConfirmationRequired, ConflictError, ValidationError) as exc:
         st.error(str(exc))
     except sqlite3.Error:
-        st.error("数据库暂时无法写入。请检查磁盘空间、文件权限或其他打开数据库的程序，再重试。")
+        st.error("暂时无法保存，请稍后重试。填写内容已保留。")
     else:
         # 下一次绘制组件前清理；校验失败时保留全部草稿。
         st.session_state["clear_submitted_fields"] = clear_fields
@@ -49,18 +49,18 @@ def profile_page(db):
     profile, version = db.get_study_profile()
     page_intro("02", "给学习留一点空间", "目标、时间和设备，按你的真实生活填写。无需姓名或学校信息。", "YOUR LEARNING PROFILE")
     if not version:
-        st.info("目标由你决定，可以先留空。其余设置是默认草稿：每周 8 小时，周五至周日使用电脑，确认保存后生效。")
+        st.info("目标可以暂时留空。请核对可用时间与设备，确认保存后用于生成学习计划。")
     with st.form(f"profile_{version}"):
         st.subheader("你的学习目标")
         if version and profile.goals == LEGACY_GOALS_EXAMPLE:
-            st.caption("当前已保存的目标与旧版示例相同，但无法判断是否是你的选择，因此保留原文。请自行核对；可以修改或清空后确认保存。")
+            st.caption("目标由你决定，可随时编辑或清空，确认保存后生效。")
         goals = st.text_area("学习目标", value=profile.goals, max_chars=2000,
                              height=155, placeholder=GOAL_PLACEHOLDER, key=f"profile_goals_{version}")
-        st.caption("每行可写一个目标。修改文字可编辑，删除对应行可移除目标；清空后保存可删除全部目标。浅色示例不会被保存，正式目标以确认保存的内容为准。")
+        st.caption("每行可填写一个目标，也可删除或清空。正式目标以确认保存的内容为准。")
         # 折叠入口只改变显示状态，不提交表单，不修改输入或数据库。
         # 联网对话统一在 AI 助手页进行，避免提交当前档案草稿。
         with st.expander("AI 帮我制定目标"):
-            st.info("需要 AI 协助时，请切换到“AI 助手”讨论目标；联网使用需配置 API Key。目标修改会先生成提案，核对并确认后才保存。这里的草稿不会自动发送。")
+            st.info("需要建议时，请切换到“AI 助手”讨论目标。目标修改会先生成待确认建议，核对后才保存；此处未提交的内容不会自动发送。")
             st.markdown("你可以先想一想：\n\n"
                         "- 我目前处于哪个学习阶段？\n"
                         "- 我对哪些学科或领域感兴趣？\n"
@@ -266,7 +266,7 @@ def main():
         with st.container(key="auth-shell"):
             account = login_gate(auth)
     except (sqlite3.Error, OSError, ValidationError):
-        st.error("无法打开本地账号服务，请检查数据目录权限和数据库版本。")
+        st.error("账号服务暂时不可用，请稍后重试。")
         return
     if account is None:
         return
@@ -301,11 +301,11 @@ def main():
             elif page == "AI 助手":
                 agent_page(auth, account)
             elif page == "开发进度" and developer_mode:
-                page_intro("05", "一步一步，成为 Agent", "从能用的学习工具开始，逐渐加入排课与智能决策。", "BUILT ONE STEP AT A TIME")
-                st.write("✅ 第一阶段：学习档案、任务增删改、完成状态、实际学习记录、SQLite 和基础统计。")
-                st.write("✅ 第二阶段：按每周预算、每天时间和设备限制生成规则计划，预览后确认保存；排不下的任务说明原因。")
-                st.write("✅ 第三阶段：免费国产模型（GLM-4.7-Flash / Xing4.0-29B）工具循环、只读查询、持久化修改提案和用户确认执行。联网使用需配置免费模型密钥。")
-                st.write("第四阶段：完善建议、目标里程碑、图表和开源协作。")
+                page_intro("DEV", "功能与维护", "查看已启用功能与后续维护事项。此页面仅对开发者开放。", "PRODUCT STATUS")
+                st.write("✅ 学习管理：档案、任务、完成状态、学习记录和进度统计。")
+                st.write("✅ 每周计划：按可用时间与设备安排任务，核对后保存；无法安排的任务会说明原因。")
+                st.write("✅ AI 助手：学习查询、目标与计划建议，所有更改由用户确认后执行。服务需由维护者启用。")
+                st.write("后续维护事项：目标里程碑、考试优先级与统计体验。")
                 st.info("AI 助手只提供读取与提案工具。模型不能确认执行，学习计划仍由规则算法生成。")
     except AuthError:
         st.error("登录已失效，请退出后重新登录。")
@@ -314,15 +314,15 @@ def main():
         if isinstance(exc, ValidationError):
             st.error(str(exc))
         else:
-            st.error("无法打开本地数据库。请检查 STUDYPILOT_DB 路径、写入权限和磁盘空间。数据库不会被自动覆盖。")
+            st.error("暂时无法读取学习数据，请稍后重试。若问题持续，请联系维护人员。")
         st.stop()
     ai_enabled = ai_configured()
     footer(ai_enabled)
-    with st.expander("运行状态与功能边界"):
+    with st.expander("使用说明"):
         if ai_enabled:
-            st.info("已配置免费模型密钥：可在 AI 助手页同意发送学习数据后使用。限流时自动改用备用免费模型，不会改用收费服务。")
+            st.info("AI 助手已开放，可在同意使用相关学习资料后发起对话。")
         else:
-            st.info("AI 未启用：未配置免费模型密钥。档案、任务和统计正常可用。")
+            st.info("AI 未启用：助手暂未开放。学习档案、任务、计划和统计仍可正常使用。")
         st.caption("规则排课已启用。AI 助手可读取学习数据、生成修改提案，只有用户核对并确认后才执行；不会自动记入计划时长或修改账号权限。")
 
 

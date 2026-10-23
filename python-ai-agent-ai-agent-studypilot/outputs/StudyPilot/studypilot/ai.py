@@ -252,12 +252,11 @@ class FreeChatTransport:
 
     def available(self):
         if os.getenv("STUDYPILOT_AI_ENABLED", "1") != "1":
-            raise AIError("免费 AI 已由管理员暂停，请稍后重试。")
+            raise AIError("AI 助手已暂停服务，请稍后重试。")
         available = [(provider, self.key(provider)) for provider in PROVIDERS]
         available = [(provider, key) for provider, key in available if key]
         if not available:
-            raise AIError("尚未配置免费模型密钥：请在服务端设置 ZHIPU_API_KEY（主模型）或 "
-                          "SILICONFLOW_API_KEY（备用模型），本机不会改用其它收费服务。")
+            raise AIError("AI 服务未配置完成，暂时无法使用。其他学习功能仍可正常使用。")
         return available
 
     def create(self, payload, *, timeout):
@@ -328,7 +327,7 @@ class FreeChatTransport:
     def _message(failures):
         details = "、".join(f"{provider.label} {KIND_TEXT.get(failure.kind, '不可用')}"
                            for provider, failure in failures)
-        return f"免费模型暂时不可用（{details or '服务不可用'}），请稍后重试；已有提案仍需你核对确认。"
+        return f"AI 服务暂时不可用（{details or '服务不可用'}），请稍后重试；已有建议仍需你核对确认。"
 
     def _record(self, provider, started, outcome, status, *, failed):
         elapsed = max(0, int((self._clock() - started) * 1000))

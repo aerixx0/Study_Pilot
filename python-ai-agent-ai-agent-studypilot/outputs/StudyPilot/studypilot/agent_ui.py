@@ -17,6 +17,11 @@ from .theme import page_intro
 
 LABELS = dict(create_task="创建任务", update_task="修改任务", delete_task="删除任务",
               update_profile="修改学习档案", log_session="保存真实学习记录", save_schedule="保存每周计划")
+TOOL_LABELS = dict(get_study_profile="读取学习档案", list_tasks="查看学习任务", get_task="查看任务详情",
+                  get_study_records="查看学习记录", get_progress="统计学习进度", preview_weekly_plan="预览每周计划",
+                  propose_task_create="准备新任务建议", propose_task_update="准备任务调整建议",
+                  propose_task_delete="准备任务删除建议", propose_profile_update="准备档案修改建议",
+                  propose_study_record="准备学习记录建议", propose_weekly_plan="准备每周计划建议")
 FIELD_LABELS = dict(title="标题", subject="科目", due_date="截止日期", estimated_minutes="预计分钟", priority="优先级",
                     status="状态", requires_computer="需要电脑", notes="备注", goals="学习目标", weekly_hours="每周小时",
                     speed="速度", preference="学习偏好", max_session_minutes="单次时长上限", levels="各科基础",
@@ -43,7 +48,7 @@ def render_proposal(proposal):
             st.warning("确认后替换这一周已保存的计划。已有真实学习记录不变。")
         render_plan(data["after"])
     elif action == "delete_task":
-        st.warning(f"将软删除 #{data['task_id']}：{data['before']['title']}。已有学习记录保留。")
+        st.warning(f"将删除 #{data['task_id']}：{data['before']['title']}。已有学习记录保留。")
         st.json(data["before"], expanded=False)
     elif action in {"update_task", "update_profile"}:
         rows = [{"字段": FIELD_LABELS.get(key, key), "当前内容": display_value(data["before"].get(key)), "拟改为": display_value(value)}
@@ -68,7 +73,7 @@ def proposal_panel(auth, token):
     proposals = list_proposals(auth, token)
     pending = [entry for entry in proposals if entry["state"] == "pending"]
     st.subheader("待确认的修改")
-    st.caption("以下内容才是实际待执行的更改。AI 回复中说“已完成”或你在聊天中说“确认”，都不会执行。")
+    st.caption("请核对建议内容，并勾选确认后应用更改。仅在对话中表达确认不会修改已保存的数据。")
     if not pending:
         st.info("暂无待确认提案。询问学习情况只会读取数据；要求修改时会在这里出现提案。")
     for proposal in pending:
@@ -104,18 +109,18 @@ def proposal_panel(auth, token):
 
 
 def agent_page(auth, account):
-    page_intro("AI", "先看清，再向前一步", "查询真实学习情况，把修改建议留给你决定。", "YOUR STUDY ASSISTANT")
+    page_intro("AI", "你的 AI 学习助手", "了解学习进度、梳理目标与计划，核对建议后再应用更改。", "YOUR STUDY ASSISTANT")
     configured = ai_configured()
     if not configured:
-        st.info(f"AI 未启用：本机服务未配置 {PRIMARY.key_env} 或 {BACKUP.key_env}。你仍可查看和处理已保存的提案。")
+        st.info(f"AI 助手暂未开放。你仍可管理学习档案、任务、计划，并处理已有建议。")
         if account.role == "developer":
             with st.expander("本机配置说明"):
                 st.write(f"在启动 StudyPilot 的同一终端设置 {PRIMARY.key_env}（主模型）和/或 {BACKUP.key_env}（备用模型），然后重启服务。"
                          "不要把 Key 发到聊天中或写进源码。")
                 st.caption(f"主模型：{PRIMARY.label}；备用模型：{BACKUP.label}。只使用这两家免费模型，不会自动改用收费服务。")
     else:
-        st.caption(f"使用免费国产模型：{PRIMARY.label}，限流、超时或服务端错误时自动改用 {BACKUP.label}。"
-                   f"本次问题、对话上下文及工具读取的当前账号学习数据会发送给模型服务；账号密码、恢复码和登录令牌不发送。")
+        st.caption(f"AI 助手由智谱或硅基流动提供模型服务。"
+                   f"经你同意，本次问题、对话上下文及相关学习资料将发送至模型服务商，不包含账号凭据。AI 建议可能有误，请核对后使用。")
     mode = st.selectbox("对话模式", MODES, index=0, key="agent_mode",
                         format_func=lambda value: MODE_LABELS[value])
     history = st.session_state.setdefault("agent_history", [])
@@ -126,20 +131,20 @@ def agent_page(auth, account):
     for message in history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-    st.caption("聊天只保留在当前登录页面，刷新或退出后清除；提案和执行收据保存在当前账号的 SQLite 中。清空聊天不会执行或删除提案。")
+    st.caption("对话在刷新或退出后清除。待确认建议和应用记录保存在你的账号中，清空对话不影响已有建议。")
     with st.form("agent_question", clear_on_submit=False):
         prompt = st.text_area("你想查询或调整什么？", key="agent_prompt", max_chars=3000,
                               placeholder="例如：看看我本周的学习情况；把任务 #1 延后到下周一，先给我看修改提案。")
-        consent = st.checkbox("我同意将本次问题、对话上下文及工具读取的学习数据发送给免费模型服务", key="agent_consent")
+        consent = st.checkbox("我同意将本次问题、对话上下文及相关学习资料发送至上述模型服务商", key="agent_consent")
         submitted = st.form_submit_button("发送给学习助手", type="primary", disabled=not configured)
     if submitted:
         if not consent:
-            st.error("请先确认本次向免费模型服务发送学习数据。输入内容已保留。")
+            st.error("请先同意本次使用相关学习资料。输入内容已保留。")
         else:
             try:
                 with st.status("正在分析；修改只会生成提案…", expanded=True) as status:
                     def show_tool(name, state):
-                        st.write(f"{'待确认提案' if state == 'pending' else '只读查询' if state == 'read' else '参数未通过'}：{name}")
+                        st.write(f"{'待确认建议' if state == 'pending' else '读取中' if state == 'read' else '未完成'}：{TOOL_LABELS.get(name, '处理学习请求')}")
                     result = run_agent(auth, st.session_state.get("auth_token"), prompt, mode=mode, history=history, on_tool=show_tool)
                     status.update(label="已完成，修改仍需你确认", state="complete", expanded=False)
                 st.session_state["agent_history"] = (history + [{"role": "user", "content": prompt},
@@ -150,6 +155,8 @@ def agent_page(auth, account):
             except (AIError, ValidationError, ConflictError, QuotaExceeded) as exc:
                 st.error(str(exc))
     if st.session_state.get("agent_trace"):
-        with st.expander("本次工具调用记录"):
-            st.dataframe(st.session_state["agent_trace"], hide_index=True, width="stretch")
+        with st.expander("本次处理记录"):
+            st.dataframe([{"操作": TOOL_LABELS.get(row["tool"], "处理学习请求"),
+                           "状态": {"read": "已读取", "pending": "待确认", "error": "未完成"}.get(row["state"], "未完成")}
+                          for row in st.session_state["agent_trace"]], hide_index=True, width="stretch")
     proposal_panel(auth, st.session_state.get("auth_token"))
