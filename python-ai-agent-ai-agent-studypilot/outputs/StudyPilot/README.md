@@ -4,9 +4,7 @@ Manage learning goals, tasks, weekly plans, and actual study time. The Web app s
 
 [Open StudyPilot](https://study-pilot-olive.vercel.app/) · [Product overview](../../../README.md) · [Application guide](README.md)
 
-[![StudyPilot product overview: goals, tasks, weekly planning, actual progress, and confirmed AI suggestions.](../../../docs/images/studypilot-overview.svg)](../../../docs/images/studypilot-overview.png)
-
-[View the 3840-pixel PNG](../../../docs/images/studypilot-overview.png) · [Open the scalable SVG](../../../docs/images/studypilot-overview.svg)
+[![StudyPilot product overview: goals, tasks, weekly planning, actual progress, and confirmed AI suggestions.](../../../docs/images/studypilot-overview.png)](../../../docs/images/studypilot-overview.png?raw=true)
 
 ## Getting started
 
@@ -62,9 +60,7 @@ Task status, estimated time, scheduled sessions, and actual study records are se
 
 ## Proposal lifecycle
 
-[![StudyPilot AI workflow: read, suggest, review, confirm, then validate and apply.](../../../docs/images/studypilot-ai-workflow.svg)](../../../docs/images/studypilot-ai-workflow.png)
-
-[View the 3840-pixel PNG](../../../docs/images/studypilot-ai-workflow.png) · [Open the scalable SVG](../../../docs/images/studypilot-ai-workflow.svg)
+[![StudyPilot AI workflow: read, suggest, review, confirm, then validate and apply.](../../../docs/images/studypilot-ai-workflow.png)](../../../docs/images/studypilot-ai-workflow.png?raw=true)
 
 AI can inspect data through read-only tools and prepare supported changes as proposals. Review the proposed values, select the confirmation checkbox, and submit the card to apply a change. The server rechecks ownership, data versions, and business rules. Proposals expire after 30 minutes, and execution receipts prevent duplicate application.
 

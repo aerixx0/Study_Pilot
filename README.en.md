@@ -20,9 +20,7 @@ It combines structured learning management with an optional AI conversation work
 
 The Web app supports **English and Simplified Chinese**, light and dark themes, desktop and mobile layouts, and a dedicated chat workspace with animated sidebar navigation. Use the hosted website, deploy your own instance, or run locally with persistent storage.
 
-[![StudyPilot product overview: goals, tasks, weekly planning, actual progress, and confirmed AI suggestions.](docs/images/studypilot-overview.svg)](docs/images/studypilot-overview.png)
-
-[View the 3840-pixel PNG](docs/images/studypilot-overview.png) · [Open the scalable SVG](docs/images/studypilot-overview.svg)
+[![StudyPilot product overview: goals, tasks, weekly planning, actual progress, and confirmed AI suggestions.](docs/images/studypilot-overview.png)](docs/images/studypilot-overview.png?raw=true)
 
 ## Who it is for
 
@@ -91,9 +89,7 @@ Recovery codes are displayed once when issued. Keep them private and save them s
 
 ## How AI changes stay under your control
 
-[![StudyPilot AI workflow: read, suggest, review, confirm, then validate and apply.](docs/images/studypilot-ai-workflow.svg)](docs/images/studypilot-ai-workflow.png)
-
-[View the 3840-pixel PNG](docs/images/studypilot-ai-workflow.png) · [Open the scalable SVG](docs/images/studypilot-ai-workflow.svg)
+[![StudyPilot AI workflow: read, suggest, review, confirm, then validate and apply.](docs/images/studypilot-ai-workflow.png)](docs/images/studypilot-ai-workflow.png?raw=true)
 
 AI collaborates in the conversation; it does not independently edit your saved learning data.
 
