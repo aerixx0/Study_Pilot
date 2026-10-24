@@ -12,6 +12,26 @@ A personal learning workspace for clear goals, practical weekly plans, and progr
 
 ---
 
+## Open StudyPilot
+
+### Use the website — no installation
+
+**[https://study-pilot-olive.vercel.app/](https://study-pilot-olive.vercel.app/)**
+
+Open the link in your browser, create an account, and start learning. The website supports English and Simplified Chinese.
+
+### Download for Windows
+
+**[Download StudyPilot for Windows (.zip)](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.1/StudyPilot-Windows-v0.6.0-preview.1.zip)**
+
+1. Install **Python 3.12 or later** from [python.org](https://www.python.org/downloads/windows/). With the classic installer, enable **Add python.exe to PATH**.
+2. Download the ZIP above, right-click it, choose **Extract All**, and open the extracted `StudyPilot-Windows` folder.
+3. Double-click **`Start-StudyPilot.cmd`**. On first launch, keep the window open while dependencies download. The local app then opens in your browser at **[http://127.0.0.1:8501/](http://127.0.0.1:8501/)**.
+
+This download runs locally in your browser and requires Python and an internet connection for initial setup. It is **not a standalone `.exe` installer**. Its Streamlit interface is currently Chinese; use the website for English. Local and website accounts are separate.
+
+[Windows instructions and troubleshooting](Usage.md) · [Release notes](https://github.com/aerixx0/Study_Pilot/releases/tag/v0.6.0-preview.1)
+
 ## What is StudyPilot?
 
 StudyPilot brings the personal learning cycle into one place: decide what matters, turn it into tasks, make room for those tasks in your week, and record what you actually did.

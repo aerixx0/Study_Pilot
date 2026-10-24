@@ -1,13 +1,52 @@
-# Running StudyPilot Locally
+# How to Open StudyPilot
 
-Double-click `Start-StudyPilot.cmd` in this folder to start the application, then open [StudyPilot](http://127.0.0.1:8501/) in your browser. Closing the startup window stops the service. Double-click the script again to restart it.
+## Option 1: Open the website
 
-The application source code and local data are located in `python-ai-agent-ai-agent-studypilot/outputs/StudyPilot`. Its `data` folder stores existing accounts and study records. Keep the entire application folder, and include `data` in your backups.
+**Website: [https://study-pilot-olive.vercel.app/](https://study-pilot-olive.vercel.app/)**
 
-On this computer, the Python runtime (`.runtime/python`) and the application's virtual environment (`.venv`) are already set up on drive D. Starting the local application does not depend on the original project folder on drive C. The Git repository is also retained for further development. Do not move `.venv` on its own; recreate the virtual environment if you move the project root folder.
+No download or Python installation is required. Open the link in your browser and register an account. Choose English or Simplified Chinese using the language selector.
 
-Hosted website: [StudyPilot](https://study-pilot-olive.vercel.app/)
+## Option 2: Download and run on Windows
 
-The local application uses SQLite, while the hosted application uses Neon PostgreSQL. Their accounts and study records are separate. Existing local accounts can still sign in locally; you must register separately on the hosted website. The cloud database does not overwrite local records.
+**[Download StudyPilot for Windows (.zip)](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.1/StudyPilot-Windows-v0.6.0-preview.1.zip)**
 
-The AI assistant requires API keys for the configured free models: `ZHIPU_API_KEY` for the primary provider and `SILICONFLOW_API_KEY` for the fallback provider. Model requests are unavailable if neither key is configured. Do not commit API keys, database connection strings, the `data` folder, or runtime files to Git.
+This ZIP contains the application source and a startup script. It is not a standalone `.exe` installer. The local Streamlit interface is currently Chinese; use the website for English.
+
+### 1. Install Python
+
+Install **Python 3.12 or later** from [the official Windows downloads page](https://www.python.org/downloads/windows/). With the classic installer, select **Add python.exe to PATH**. If Python 3.12 or later is already installed and available through `py` or `python`, skip this step.
+
+### 2. Download and extract
+
+Download the ZIP using the link above. Right-click the downloaded file and choose **Extract All**. Open the extracted **`StudyPilot-Windows`** folder. Do not run the launcher from inside the ZIP preview.
+
+### 3. Start the application
+
+Double-click **`Start-StudyPilot.cmd`** in that folder.
+
+On the first launch, the script creates a Python virtual environment and downloads dependencies. An internet connection is required for this setup. Keep the startup window open and wait for it to finish. The browser opens automatically when the app is ready.
+
+**Local address: [http://127.0.0.1:8501/](http://127.0.0.1:8501/)**
+
+If the browser does not open automatically, open this local address yourself after startup completes. The address works only while the local service is running on your computer.
+
+### 4. Stop or reopen
+
+Press **Ctrl+C** in the startup window to stop the service. To use it again, double-click **`Start-StudyPilot.cmd`**. Keep the entire extracted folder together.
+
+## If startup fails
+
+- **Python cannot be found:** Install Python 3.12 or later, enable its PATH option if offered, then reopen the launcher.
+- **Dependency installation fails:** Check your internet connection and the error shown in the startup window, then retry.
+- **The browser cannot open the local address:** Wait for installation and startup to finish. Keep the startup window open and check it for errors.
+- **Port 8501 is already in use:** Close an earlier StudyPilot startup window and retry. Do not stop unrelated applications.
+
+The automatically generated **Source code (zip)** and **Source code (tar.gz)** links on GitHub are general repository archives. For the Windows steps above, use the named **`StudyPilot-Windows-v0.6.0-preview.1.zip`** download.
+
+## Your data
+
+The website and local application have separate accounts and study records, with no automatic synchronization. Register separately for each installation you use.
+
+Local accounts and study records are stored under `python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/data`. Include that folder in backups. Do not replace it when updating application files. If you move the application folder, recreate its `.venv` virtual environment in the new location.
+
+Core goals, tasks, planning, and records work without AI. Model requests require server-side `ZHIPU_API_KEY` and/or `SILICONFLOW_API_KEY` environment variables. See the [AI configuration guide](README.md#optional-ai-configuration). Keep API keys, recovery codes, database connection strings, and local data private.
