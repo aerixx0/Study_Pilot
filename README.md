@@ -20,8 +20,6 @@ It combines structured learning management with an optional AI conversation work
 
 The Web app supports **English and Simplified Chinese**, light and dark themes, desktop and mobile layouts, and a dedicated chat workspace with animated sidebar navigation. Use the hosted website, deploy your own instance, or run locally with persistent storage.
 
-[![StudyPilot product overview: goals, tasks, weekly planning, actual progress, and confirmed AI suggestions.](docs/images/studypilot-overview.png)](docs/images/studypilot-overview.png?raw=true)
-
 ## Who it is for
 
 - **Independent learners** working through courses, books, and practical projects.
@@ -88,8 +86,6 @@ Each account has its own learning profile, tasks, records, plans, and proposals.
 Recovery codes are displayed once when issued. Keep them private and save them somewhere accessible if you lose your password.
 
 ## How AI changes stay under your control
-
-[![StudyPilot AI workflow: read, suggest, review, confirm, then validate and apply.](docs/images/studypilot-ai-workflow.png)](docs/images/studypilot-ai-workflow.png?raw=true)
 
 AI collaborates in the conversation; it does not independently edit your saved learning data.
 
