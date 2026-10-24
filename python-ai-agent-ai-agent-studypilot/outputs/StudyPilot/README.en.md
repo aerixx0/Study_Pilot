@@ -2,7 +2,11 @@
 
 Manage learning goals, tasks, weekly plans, and actual study time. The Web app supports English and Simplified Chinese, with light and dark themes and a dedicated chat workspace.
 
-[Open StudyPilot](https://study-pilot-olive.vercel.app/) · [Product overview](../../../README.en.md) · [简体中文](README.md)
+[Open StudyPilot](https://study-pilot-olive.vercel.app/) · [Product overview](../../../README.md) · [Application guide](README.md)
+
+[![StudyPilot product overview: goals, tasks, weekly planning, actual progress, and confirmed AI suggestions.](../../../docs/images/studypilot-overview.svg)](../../../docs/images/studypilot-overview.png)
+
+[View the 3840-pixel PNG](../../../docs/images/studypilot-overview.png) · [Open the scalable SVG](../../../docs/images/studypilot-overview.svg)
 
 ## Getting started
 
@@ -48,3 +52,20 @@ python -m unittest discover -s tests -v
 Tests use disposable accounts and mocked model responses. PostgreSQL integration tests require a separate test database and otherwise report a skip.
 
 UI translations live in `public/i18n.js`; server error translations live in `studypilot/i18n.py`. Translate explicit interface strings only. Keep user text, stored enum values, request authorization, and confirmation logic unchanged.
+
+
+## Planning and actual study
+
+The weekly scheduler uses your time budget, daily availability, due dates, priorities, maximum session length, and device requirements. It accounts for actual time and relevant sessions reserved in other saved weeks. Review the proposed sessions and any unscheduled work before confirming a plan.
+
+Task status, estimated time, scheduled sessions, and actual study records are separate. Only actual study records count toward study-time statistics. Deleting a task keeps its existing study records.
+
+## Proposal lifecycle
+
+[![StudyPilot AI workflow: read, suggest, review, confirm, then validate and apply.](../../../docs/images/studypilot-ai-workflow.svg)](../../../docs/images/studypilot-ai-workflow.png)
+
+[View the 3840-pixel PNG](../../../docs/images/studypilot-ai-workflow.png) · [Open the scalable SVG](../../../docs/images/studypilot-ai-workflow.svg)
+
+AI can inspect data through read-only tools and prepare supported changes as proposals. Review the proposed values, select the confirmation checkbox, and submit the card to apply a change. The server rechecks ownership, data versions, and business rules. Proposals expire after 30 minutes, and execution receipts prevent duplicate application.
+
+Conversation messages clear on refresh or sign-out. Pending proposals and execution records persist with the account. Different deployments do not automatically synchronize data; exporting learning data does not currently provide a one-click full-account restore through the Web interface.

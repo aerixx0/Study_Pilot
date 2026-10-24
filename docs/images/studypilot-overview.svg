@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" width="3840" height="2400" viewBox="0 0 1600 1000">
+<title>StudyPilot learning workspace and confirmed AI workflow</title>
+<rect width="1600" height="1000" fill="#07090D"/>
+<path d="M65 85 L89 61" fill="none" stroke="#F49B7A" stroke-width="3" stroke-linecap="round"/>
+<path d="M77 61 L89 61" fill="none" stroke="#F49B7A" stroke-width="3" stroke-linecap="round"/>
+<path d="M89 61 L89 73" fill="none" stroke="#F49B7A" stroke-width="3" stroke-linecap="round"/>
+<text x="105" y="53" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="30" font-weight="600" fill="#FAFBFF">StudyPilot</text>
+<rect x="1324" y="53" width="212" height="38" rx="19" fill="#171C25" stroke="#394456"/>
+<text x="1338" y="62" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" fill="#F49B7A">PRODUCT OVERVIEW</text>
+<text x="64" y="131" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="54" font-weight="600" fill="#FAFBFF">A clearer path to learning.</text>
+<text x="65" y="214" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="23" font-weight="400" fill="#C3CCDA">Set your direction. Make a plan. Track the effort that actually happened.</text>
+<rect x="64" y="302" width="350" height="326" rx="18" fill="#11151D" stroke="#394456"/>
+<text x="88" y="326" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="600" fill="#F49B7A">01 / GOALS</text>
+<rect x="89" y="373" width="37" height="37" rx="18" fill="#07090D" stroke="#F49B7A"/>
+<rect x="99" y="383" width="17" height="17" rx="8" fill="#07090D" stroke="#F49B7A"/>
+<path d="M117 401 L132 416" fill="none" stroke="#F49B7A" stroke-width="3" stroke-linecap="round"/>
+<text x="88" y="438" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="27" font-weight="600" fill="#FAFBFF">Set your direction</text>
+<text x="88" y="482" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#C3CCDA">Goals and preferences.</text>
+<text x="88" y="514" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#C3CCDA">Edit or leave goals blank.</text>
+<rect x="88" y="558" width="302" height="44" rx="10" fill="#07090D" stroke="#394456"/>
+<text x="102" y="570" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="400" fill="#C3CCDA">Your goals. Your choice.</text>
+<path d="M420 459 L433 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M428 454 L433 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M428 464 L433 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<rect x="438" y="302" width="350" height="326" rx="18" fill="#11151D" stroke="#394456"/>
+<text x="462" y="326" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="600" fill="#F49B7A">02 / TASKS</text>
+<rect x="463" y="373" width="38" height="43" rx="7" fill="#07090D" stroke="#F49B7A"/>
+<path d="M473 385 L491 385" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M473 395 L491 395" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M473 405 L491 405" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<text x="462" y="438" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="27" font-weight="600" fill="#FAFBFF">Define the next step</text>
+<text x="462" y="482" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#C3CCDA">Due dates and priorities.</text>
+<text x="462" y="514" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#C3CCDA">Estimates are not study time.</text>
+<rect x="462" y="562" width="105" height="38" rx="19" fill="#171C25" stroke="#394456"/>
+<text x="476" y="571" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" fill="#C3CCDA">Due date</text>
+<rect x="578" y="562" width="102" height="38" rx="19" fill="#171C25" stroke="#394456"/>
+<text x="592" y="571" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" fill="#C3CCDA">Priority</text>
+<path d="M794 459 L807 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M802 454 L807 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M802 464 L807 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<rect x="812" y="302" width="350" height="326" rx="18" fill="#11151D" stroke="#394456"/>
+<text x="836" y="326" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="600" fill="#F49B7A">03 / WEEKLY PLAN</text>
+<rect x="837" y="377" width="43" height="37" rx="7" fill="#07090D" stroke="#F49B7A"/>
+<path d="M837 389 L880 389" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M848 373 L848 382" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M869 373 L869 382" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M847 400 L854 400" fill="none" stroke="#F49B7A" stroke-width="3" stroke-linecap="round"/>
+<path d="M863 400 L870 400" fill="none" stroke="#F49B7A" stroke-width="3" stroke-linecap="round"/>
+<text x="836" y="438" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="27" font-weight="600" fill="#FAFBFF">Make time for it</text>
+<text x="836" y="482" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#C3CCDA">Time, devices, and deadlines.</text>
+<text x="836" y="514" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#C3CCDA">Review before you save.</text>
+<rect x="836" y="558" width="35" height="44" rx="6" fill="#07090D" stroke="#394456"/>
+<text x="847" y="567" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="400" fill="#C3CCDA">M</text>
+<rect x="879" y="558" width="35" height="44" rx="6" fill="#07090D" stroke="#394456"/>
+<text x="890" y="567" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="400" fill="#F49B7A">T</text>
+<rect x="922" y="558" width="35" height="44" rx="6" fill="#07090D" stroke="#394456"/>
+<text x="933" y="567" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="400" fill="#C3CCDA">W</text>
+<rect x="965" y="558" width="35" height="44" rx="6" fill="#07090D" stroke="#394456"/>
+<text x="976" y="567" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="400" fill="#F49B7A">T</text>
+<rect x="1008" y="558" width="35" height="44" rx="6" fill="#07090D" stroke="#394456"/>
+<text x="1019" y="567" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="400" fill="#C3CCDA">F</text>
+<rect x="1051" y="558" width="35" height="44" rx="6" fill="#07090D" stroke="#394456"/>
+<text x="1062" y="567" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="400" fill="#F49B7A">S</text>
+<rect x="1094" y="558" width="35" height="44" rx="6" fill="#07090D" stroke="#394456"/>
+<text x="1105" y="567" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="400" fill="#C3CCDA">S</text>
+<path d="M1168 459 L1181 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M1176 454 L1181 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M1176 464 L1181 459" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<rect x="1186" y="302" width="350" height="326" rx="18" fill="#11151D" stroke="#394456"/>
+<text x="1210" y="326" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="600" fill="#F49B7A">04 / PROGRESS</text>
+<rect x="1213" y="399" width="8" height="17" rx="3" fill="#F49B7A" stroke="#F49B7A"/>
+<rect x="1228" y="387" width="8" height="29" rx="3" fill="#F49B7A" stroke="#F49B7A"/>
+<rect x="1243" y="375" width="8" height="41" rx="3" fill="#F49B7A" stroke="#F49B7A"/>
+<text x="1210" y="438" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="27" font-weight="600" fill="#FAFBFF">See your real effort</text>
+<text x="1210" y="482" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#C3CCDA">Log actual study time.</text>
+<text x="1210" y="514" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="400" fill="#C3CCDA">Review your weekly totals.</text>
+<rect x="1216" y="590" width="22" height="11" rx="4" fill="#F49B7A" stroke="#F49B7A"/>
+<rect x="1256" y="578" width="22" height="23" rx="4" fill="#F49B7A" stroke="#F49B7A"/>
+<rect x="1296" y="583" width="22" height="18" rx="4" fill="#F49B7A" stroke="#F49B7A"/>
+<rect x="1336" y="567" width="22" height="34" rx="4" fill="#F49B7A" stroke="#F49B7A"/>
+<rect x="1376" y="573" width="22" height="28" rx="4" fill="#F49B7A" stroke="#F49B7A"/>
+<text x="1430" y="567" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="400" fill="#C3CCDA">ACTUAL</text>
+<rect x="64" y="670" width="1472" height="206" rx="18" fill="#11151D" stroke="#394456"/>
+<text x="90" y="698" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="28" font-weight="600" fill="#FAFBFF">AI assistance, under your control</text>
+<rect x="1062" y="696" width="78" height="38" rx="19" fill="#171C25" stroke="#394456"/>
+<text x="1076" y="705" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" fill="#C3CCDA">Chat</text>
+<rect x="1150" y="696" width="132" height="38" rx="19" fill="#171C25" stroke="#394456"/>
+<text x="1164" y="705" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" fill="#C3CCDA">Goal coach</text>
+<rect x="1292" y="696" width="154" height="38" rx="19" fill="#171C25" stroke="#394456"/>
+<text x="1306" y="705" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" fill="#C3CCDA">Plan builder</text>
+<text x="90" y="748" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="21" font-weight="400" fill="#C3CCDA">Ask about progress. Review suggested changes before applying them.</text>
+<rect x="90" y="801" width="154" height="45" rx="10" fill="#07090D" stroke="#394456"/>
+<text x="112" y="812" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#FAFBFF">Read</text>
+<path d="M251 823 L267 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M262 818 L267 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M262 828 L267 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<rect x="275" y="801" width="154" height="45" rx="10" fill="#07090D" stroke="#394456"/>
+<text x="297" y="812" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#FAFBFF">Suggest</text>
+<path d="M436 823 L452 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M447 818 L452 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M447 828 L452 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<rect x="460" y="801" width="154" height="45" rx="10" fill="#07090D" stroke="#394456"/>
+<text x="482" y="812" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#FAFBFF">Review</text>
+<path d="M621 823 L637 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M632 818 L637 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M632 828 L637 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<rect x="645" y="801" width="154" height="45" rx="10" fill="#07090D" stroke="#394456"/>
+<text x="667" y="812" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#83DDC1">Confirm</text>
+<path d="M806 823 L822 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M817 818 L822 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<path d="M817 828 L822 823" fill="none" stroke="#F49B7A" stroke-width="2" stroke-linecap="round"/>
+<rect x="830" y="801" width="154" height="45" rx="10" fill="#07090D" stroke="#394456"/>
+<text x="852" y="812" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="600" fill="#83DDC1">Apply</text>
+<path d="M1113 820.56 L1120.92 828.04" fill="none" stroke="#83DDC1" stroke-width="3" stroke-linecap="round"/>
+<path d="M1120.92 828.04 L1135 810" fill="none" stroke="#83DDC1" stroke-width="3" stroke-linecap="round"/>
+<text x="1150" y="810" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="21" font-weight="400" fill="#83DDC1">Your confirmation is required.</text>
+<rect x="64" y="916" width="7" height="7" rx="3" fill="#F49B7A" stroke="#F49B7A"/>
+<text x="84" y="908" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#C3CCDA">Personal accounts</text>
+<rect x="438" y="916" width="7" height="7" rx="3" fill="#F49B7A" stroke="#F49B7A"/>
+<text x="458" y="908" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#C3CCDA">Persistent storage</text>
+<rect x="812" y="916" width="7" height="7" rx="3" fill="#F49B7A" stroke="#F49B7A"/>
+<text x="832" y="908" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#C3CCDA">Light and dark themes</text>
+<rect x="1186" y="916" width="7" height="7" rx="3" fill="#F49B7A" stroke="#F49B7A"/>
+<text x="1206" y="908" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="400" fill="#C3CCDA">English and Chinese</text>
+<text x="64" y="966" dominant-baseline="text-before-edge" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="400" fill="#C3CCDA">FEATURE MAP  /  Illustrative interface elements; no live account data.</text>
+</svg>

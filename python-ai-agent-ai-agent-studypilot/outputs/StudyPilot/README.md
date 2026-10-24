@@ -1,94 +1,71 @@
-# StudyPilot · 运行与配置
+# StudyPilot
 
-把目标、任务、每周计划和真实学习记录放在同一个工作空间，让每一步学习都有依据。
+Manage learning goals, tasks, weekly plans, and actual study time. The Web app supports English and Simplified Chinese, with light and dark themes and a dedicated chat workspace.
 
-[在线使用](https://study-pilot-olive.vercel.app/) · [产品介绍](../../../README.md) · [English](README.en.md) · [部署指南](DEPLOYMENT.md)
+[Open StudyPilot](https://study-pilot-olive.vercel.app/) · [Product overview](../../../README.md) · [Application guide](README.md)
 
-## 使用流程
+[![StudyPilot product overview: goals, tasks, weekly planning, actual progress, and confirmed AI suggestions.](../../../docs/images/studypilot-overview.svg)](../../../docs/images/studypilot-overview.png)
 
-1. 创建账号，妥善保存仅显示一次的恢复码。
-2. 设置学习目标、可用时间、设备与偏好，核对后保存。目标可以暂时留空。
-3. 添加任务，设置优先级、截止日期与预计用时。
-4. 根据每周预算和每日条件生成计划预览，确认后保存。
-5. 在实际学习后记录用时，通过图表查看投入与进度。
+[View the 3840-pixel PNG](../../../docs/images/studypilot-overview.png) · [Open the scalable SVG](../../../docs/images/studypilot-overview.svg)
 
-网站支持中文与英文、亮暗主题和手机布局。对话可协助查询进度、讨论目标和提出计划建议；正式修改始终需要用户确认。
+## Getting started
 
-## 在本地运行 Web 版
+Open the deployed website and choose **EN** in the top-right corner. On your first visit, StudyPilot follows your browser language. Your manual choice is remembered in that browser.
 
-准备 Python 3.12 或更新的兼容版本。在本目录执行：
+1. Create an account and save your recovery code somewhere private. It is shown only once.
+2. Review your learning profile. Set your available time and devices, then confirm saving. Goals can stay blank.
+3. Create tasks with priorities, due dates, and estimates. Preview and confirm a weekly plan.
+4. Log study time only after the study actually happened. Estimates and plans do not count as actual time.
+5. Use Chat to discuss progress, goals, or plans when a model provider is configured. Review and explicitly confirm each proposed change before it can be applied.
+
+Switching language keeps form drafts and preserves your own writing. Existing goals, task titles, notes, and conversations stay in their original language. AI is instructed to reply in your selected language; previously generated replies are not rewritten.
+
+## Running the Web app locally
+
+Use Python 3.12 or later. From this application directory:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 $env:STUDYPILOT_WEB_LOCAL = "1"
-.\.venv\Scripts\python.exe -m uvicorn studypilot.web:app --host 127.0.0.1 --port 8510
+python -m uvicorn studypilot.web:app --host 127.0.0.1 --port 8510
 ```
 
-打开 [本地 Web 界面](http://127.0.0.1:8510/)。此模式使用 SQLite，支持中英文切换；关闭服务后，已保存的数据仍保留在本地。
+Open `http://127.0.0.1:8510/`. Local Web accounts use SQLite. The separate Streamlit interface remains Chinese; the language switch is available in the Web app.
 
-若希望使用中文 Streamlit 界面，可运行本目录的 `Start-StudyPilot.cmd`，或执行：
+For Vercel, follow [deployment instructions](DEPLOYMENT.md). Production uses PostgreSQL and requires a configured database. Local accounts are not automatically copied to the cloud.
+
+## AI and privacy
+
+Provider keys are read only from server environment variables: `ZHIPU_API_KEY` and `SILICONFLOW_API_KEY`. See [.env.example](.env.example). Never put keys in browser code or Git. Existing provider restrictions, persistent quotas, authentication, and confirmation checks apply equally to both languages.
+
+Before a chat request, you must consent to sending the question, conversation context, and relevant learning data to the listed model providers. Account credentials are excluded. AI suggestions may be wrong; no change is applied merely because you say “confirm” in chat.
+
+## Verification and translations
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-local.txt
-.\.venv\Scripts\python.exe start_studypilot.py
+pip install -r requirements-dev.txt
+python -m unittest discover -s tests -v
 ```
 
-本地数据默认位于 `data/accounts/`。备份时请保留数据目录；账号凭据、密钥、数据文件和虚拟环境不应提交到 Git。
+Tests use disposable accounts and mocked model responses. PostgreSQL integration tests require a separate test database and otherwise report a skip.
 
-## 自行部署 Web 版
+UI translations live in `public/i18n.js`; server error translations live in `studypilot/i18n.py`. Translate explicit interface strings only. Keep user text, stored enum values, request authorization, and confirmation logic unchanged.
 
-Web 版采用 FastAPI 和原生 HTML、CSS、JavaScript；云端使用 PostgreSQL 持久化。
 
-| 配置项 | 值 |
-| --- | --- |
-| Vercel 项目根目录 | `python-ai-agent-ai-agent-studypilot/outputs/StudyPilot` |
-| 服务端入口 | `studypilot.web:app`，由 `pyproject.toml` 指定 |
-| 运行依赖 | `requirements.txt` |
-| 数据库 | `DATABASE_URL`，兼容 `POSTGRES_URL` |
+## Planning and actual study
 
-具体设置、环境隔离与部署核对见 [DEPLOYMENT.md](DEPLOYMENT.md)。云端不会使用临时 SQLite 保存账号数据；本地与云端实例的账号和学习数据不会自动同步。
+The weekly scheduler uses your time budget, daily availability, due dates, priorities, maximum session length, and device requirements. It accounts for actual time and relevant sessions reserved in other saved weeks. Review the proposed sessions and any unscheduled work before confirming a plan.
 
-## 可选 AI 服务
+Task status, estimated time, scheduled sessions, and actual study records are separate. Only actual study records count toward study-time statistics. Deleting a task keeps its existing study records.
 
-对话支持日常交流、目标教练和计划构建三种模式。模型接入由服务端管理，客户端不能指定任意服务地址或模型。
+## Proposal lifecycle
 
-| 环境变量 | 用途 |
-| --- | --- |
-| `ZHIPU_API_KEY` | 主模型服务密钥 |
-| `SILICONFLOW_API_KEY` | 备用模型服务密钥 |
-| `STUDYPILOT_AI_ENABLED` | 设为 `0` 可暂停模型调用 |
+[![StudyPilot AI workflow: read, suggest, review, confirm, then validate and apply.](../../../docs/images/studypilot-ai-workflow.svg)](../../../docs/images/studypilot-ai-workflow.png)
 
-密钥应配置在服务进程或托管平台的环境变量中。项目不会自动加载 `.env` 文件；[.env.example](.env.example) 仅提供变量名称说明。
+[View the 3840-pixel PNG](../../../docs/images/studypilot-ai-workflow.png) · [Open the scalable SVG](../../../docs/images/studypilot-ai-workflow.svg)
 
-未配置模型密钥时，学习管理功能仍可使用。启用 AI 后，每次请求需同意向列出的模型服务商发送本次问题、对话上下文及相关学习资料；账号凭据不包含在内。
+AI can inspect data through read-only tools and prepare supported changes as proposals. Review the proposed values, select the confirmation checkbox, and submit the card to apply a change. The server rechecks ownership, data versions, and business rules. Proposals expire after 30 minutes, and execution receipts prevent duplicate application.
 
-所有修改都经过“提出建议 → 核对内容 → 用户确认 → 服务端验证”流程。提案有有效期和版本检查，重复提交不会重复写入。AI 不会根据计划推定真实学习用时，也不能通过聊天中的“确认”直接执行更改。
-
-模型白名单、故障恢复、限流与额度控制见 [FREE_AI_ENGINE.md](FREE_AI_ENGINE.md)。服务可用性与费用政策以提供方当前规则为准。
-
-## 数据与账号管理
-
-- 各账号拥有独立的学习档案、任务、记录、计划和提案。
-- 支持注册、登录、退出、密码修改、恢复码重置及登录会话管理。
-- 支持修改昵称、头像标识、个性签名和登录用户名。
-- 可导出自己的学习数据；导出不包含密码、恢复码或登录令牌。
-- 删除任务会保留已发生的学习记录；计划与预计用时不会自动计入实际统计。
-- 网站切换语言会保留草稿，不翻译或改写用户原文。语言选择保存在当前浏览器中。
-
-## 测试与维护
-
-安装测试依赖后，在本目录运行：
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-```
-
-测试使用临时账号和独立测试数据，模型异常场景使用 Mock。PostgreSQL 集成测试需单独配置测试数据库，否则会明确跳过；配置方法见部署指南。
-
-界面语言词典位于 `public/i18n.js`，服务端提示位于 `studypilot/i18n.py`。翻译仅用于界面文字，用户内容和数据库标准值保持原样。
-
-## 开源许可
-
-项目代码采用 [MIT License](LICENSE)。第三方模型与托管服务按各自的条款和服务政策使用。
+Conversation messages clear on refresh or sign-out. Pending proposals and execution records persist with the account. Different deployments do not automatically synchronize data; exporting learning data does not currently provide a one-click full-account restore through the Web interface.

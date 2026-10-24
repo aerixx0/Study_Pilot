@@ -1,9 +1,9 @@
 # StudyPilot
 
-把想学的，变成做到的。
+Turn learning into progress.
 
-支持中英文的学习管理工具，集中管理学习目标、任务、每周计划和真实用时，并通过可确认的 AI 建议辅助学习安排。
+A personal learning workspace for goals, tasks, weekly plans, actual study time, and AI suggestions that require your confirmation.
 
-[在线使用](https://study-pilot-olive.vercel.app/) · [产品介绍](../README.md) · [English](../README.en.md) · [本地运行与配置](outputs/StudyPilot/README.md)
+[Open StudyPilot](https://study-pilot-olive.vercel.app/) · [Detailed product overview](../README.md) · [Application guide](outputs/StudyPilot/README.md) · [Deployment guide](outputs/StudyPilot/DEPLOYMENT.md)
 
-应用源码位于 [`outputs/StudyPilot`](outputs/StudyPilot/)。自行部署请参阅 [部署指南](outputs/StudyPilot/DEPLOYMENT.md)。
+Application sources are in [`outputs/StudyPilot`](outputs/StudyPilot/). The Web app supports English and Simplified Chinese. The separate local Streamlit interface remains Chinese.
