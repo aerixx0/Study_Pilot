@@ -2,6 +2,8 @@
 
 Manage learning goals, tasks, weekly plans, and actual study time. The Web app supports English and Simplified Chinese, with light and dark themes and a dedicated chat workspace.
 
+[Open StudyPilot](https://study-pilot-olive.vercel.app/) · [Product overview](../../../README.en.md) · [简体中文](README.md)
+
 ## Getting started
 
 Open the deployed website and choose **EN** in the top-right corner. On your first visit, StudyPilot follows your browser language. Your manual choice is remembered in that browser.
@@ -39,7 +41,7 @@ Before a chat request, you must consent to sending the question, conversation co
 ## Verification and translations
 
 ```powershell
-pip install -r requirements-local.txt
+pip install -r requirements-dev.txt
 python -m unittest discover -s tests -v
 ```
 
