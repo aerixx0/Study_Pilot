@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import sqlite3
 from urllib.parse import urlsplit
+from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -22,6 +23,7 @@ from .models import DAYS, DEVICES, LEVELS, PRIORITIES, SPEEDS, STATUSES, SUBJECT
 from .progress import get_progress
 from .proposals import execute_proposal, list_proposals, reject_proposal
 from .quota import QuotaExceeded
+from .i18n import error_text, request_language
 
 ROOT = Path(__file__).resolve().parent.parent
 COOKIE = "studypilot_session"
@@ -97,6 +99,7 @@ class PasswordChange(Confirm):
 
 
 class Chat(Body):
+    language: Literal["zh-CN", "en"] = "zh-CN"
     prompt: str = Field(min_length=1, max_length=3000)
     # 服务端固定使用免费模型；model 仅为兼容旧页面保留，不参与选择服务商。
     model: str = Field(default=DEFAULT_MODEL, max_length=100)
@@ -126,59 +129,71 @@ def create_app(auth_factory=None):
                 cached_auth = PostgresAuthStore()
         return cached_auth
 
+    def error_response(request, message, status_code, headers=None):
+        language = request_language(request)
+        return JSONResponse({"error": error_text(message, language)}, status_code=status_code,
+                            headers={**(headers or {}), "Content-Language": language})
+
     @app.middleware("http")
     async def protection(request, call_next):
         if request.method not in {"GET", "HEAD", "OPTIONS"}:
             origin = request.headers.get("origin", "")
             parsed = urlsplit(origin)
             if parsed.scheme not in {"http", "https"} or parsed.netloc != request.headers.get("host") or (os.getenv("VERCEL") and parsed.scheme != "https"):
-                return JSONResponse({"error": "请求来源无效，请从本站页面重新提交。"}, status_code=403)
+                return error_response(request, "请求来源无效，请从本站页面重新提交。", status_code=403)
             if "application/json" not in request.headers.get("content-type", "").lower():
-                return JSONResponse({"error": "请使用 JSON 请求。"}, status_code=415)
+                return error_response(request, "请使用 JSON 请求。", status_code=415)
             if len(await request.body()) > 131072:
-                return JSONResponse({"error": "提交内容过大，请缩小范围。"}, status_code=413)
+                return error_response(request, "提交内容过大，请缩小范围。", status_code=413)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
+            response.headers["Content-Language"] = request_language(request)
         return response
+
+    @app.exception_handler(HTTPException)
+    async def http_error(request, error):
+        language = request_language(request)
+        return JSONResponse({"detail": error_text(error.detail, language)}, status_code=error.status_code,
+                            headers={**(error.headers or {}), "Content-Language": language})
 
     @app.exception_handler(ValidationError)
     async def invalid(request, error):
         if "DATABASE_URL" in str(error):
-            return JSONResponse({"error": "账号服务暂时不可用，请稍后重试。"}, status_code=503)
-        return JSONResponse({"error": str(error)}, status_code=400)
+            return error_response(request, "账号服务暂时不可用，请稍后重试。", status_code=503)
+        return error_response(request, str(error), status_code=400)
 
     @app.exception_handler(ConfirmationRequired)
     async def unconfirmed(request, error):
-        return JSONResponse({"error": str(error)}, status_code=400)
+        return error_response(request, str(error), status_code=400)
 
     @app.exception_handler(ConflictError)
     async def conflict(request, error):
-        return JSONResponse({"error": str(error)}, status_code=409)
+        return error_response(request, str(error), status_code=409)
 
     @app.exception_handler(AuthError)
     async def unauthenticated(request, error):
-        return JSONResponse({"error": str(error)}, status_code=401)
+        return error_response(request, str(error), status_code=401)
 
     @app.exception_handler(AIError)
     async def ai_error(request, error):
-        return JSONResponse({"error": str(error)}, status_code=502)
+        return error_response(request, str(error), status_code=502)
 
     @app.exception_handler(QuotaExceeded)
     async def quota_error(request, error):
-        return JSONResponse({"error": str(error)}, status_code=429, headers={"Retry-After": "600"})
+        return error_response(request, str(error), status_code=429, headers={"Retry-After": "600"})
 
     @app.exception_handler(sqlite3.Error)
     async def storage_error(request, error):
-        return JSONResponse({"error": "服务暂时不可用，请稍后重试。若问题持续，请联系维护人员。"}, status_code=503)
+        return error_response(request, "服务暂时不可用，请稍后重试。若问题持续，请联系维护人员。", status_code=503)
 
     @app.exception_handler(RequestValidationError)
     async def body_error(request, error):
         # 不回显 Pydantic 的 input，避免密码或恢复码出现在错误响应。
-        return JSONResponse({"error": "提交字段或类型不正确，请检查后重试。输入内容已保留。"}, status_code=422)
+        return error_response(request, "提交字段或类型不正确，请检查后重试。输入内容已保留。", status_code=422)
 
     def context(request: Request):
         auth = store()
@@ -220,6 +235,10 @@ def create_app(auth_factory=None):
     @app.get("/study.js")
     def js_file():
         return FileResponse(ROOT/"public"/"study.js", media_type="text/javascript")
+
+    @app.get("/i18n.js")
+    def i18n_file():
+        return FileResponse(ROOT/"public"/"i18n.js", media_type="text/javascript")
 
     @app.get("/motion.js")
     def motion_file():
@@ -267,9 +286,11 @@ def create_app(auth_factory=None):
         return identity(*ctx)
 
     @app.get("/api/state")
-    def state(ctx=Depends(context)):
+    def state(request: Request, ctx=Depends(context)):
         db = learning(ctx)
         profile, version = db.get_study_profile()
+        if version == 0 and request_language(request) == "en":
+            profile.preference = "Short sessions, hands-on practice, and English explanations"
         tasks, sessions = db.get_tasks(), db.get_sessions()
         with db.connection() as conn:
             plans = [dict(row) for row in conn.execute("SELECT week_start,version,payload FROM schedule_plans ORDER BY week_start DESC")]
@@ -373,7 +394,7 @@ def create_app(auth_factory=None):
             raise ValidationError("请先同意将本次问题、对话上下文及相关学习资料发送至上述模型服务商。")
         if len(json.dumps(body.history, ensure_ascii=False)) > 20000:
             raise ValidationError("对话上下文过长，请清空后重试。")
-        result = run_agent(ctx[0], ctx[1], body.prompt, mode=body.mode, history=body.history)
+        result = run_agent(ctx[0], ctx[1], body.prompt, mode=body.mode, history=body.history, language=body.language)
         return asdict(result)
 
     @app.post("/api/proposals/{proposal_id}/execute")

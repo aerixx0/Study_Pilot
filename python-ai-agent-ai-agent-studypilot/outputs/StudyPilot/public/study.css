@@ -5,6 +5,32 @@
 @media(max-width:700px){.shell{padding:22px 18px}.brand{font-size:29px}.quiet{display:none}.header-side{gap:10px}#navigation button{padding:10px 14px}.grid,.grid.three,.hero{grid-template-columns:1fr;gap:4px}.hero img{max-height:190px}.days{grid-template-columns:repeat(4,minmax(0,1fr))}.card{padding:19px}h1{letter-spacing:-1px}.page{padding:30px 0}.task-head{flex-wrap:wrap}.bubble.user{margin-left:5%}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
+/* Language selection shares the existing appearance controls. */
+.language-switch{display:flex;align-items:center;gap:2px;padding:4px;border:1px solid var(--line);border-radius:99px;flex-shrink:0}
+.language-switch button{border:0;border-radius:99px;background:transparent;color:var(--muted);font-size:11px;min-width:35px;height:35px;padding:5px 8px;transition:background 240ms,color 200ms}
+.language-switch button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent)}
+.new-conversation span[data-i18n]{font:inherit}
+html[lang=en] h1{letter-spacing:-1px;overflow-wrap:break-word}
+html[lang=en] .day{overflow-wrap:break-word}
+html[lang=en] .conversation-welcome h1{max-width:650px;margin-left:auto;margin-right:auto}
+html[lang=en] .composer-consent{line-height:1.5}
+body[data-workspace=conversation] #conversation-topbar{right:240px}
+@media(max-width:900px){
+  .header-side{gap:10px}
+  .quiet{display:none}
+  body[data-workspace=conversation] .language-switch{background:var(--bg);border-color:transparent}
+  body[data-workspace=conversation] .language-switch button{height:30px;min-width:30px;padding:4px 7px}
+  body[data-workspace=conversation] .header-side{gap:6px}
+  body[data-workspace=conversation] #conversation-topbar{right:188px}
+  html[lang=en] .conversation-welcome h1{font-size:28px}
+}
+@media(max-width:480px){
+  .shell{padding-left:14px;padding-right:14px}.masthead{gap:8px}.brand{font-size:25px}
+  .header-side{gap:5px}.theme-switch{padding:3px;gap:1px}.theme-switch button{width:29px;height:29px;padding:6px}
+  .language-switch{padding:3px}.language-switch button{height:29px;min-width:29px;padding:4px 6px;font-size:10px}
+  html[lang=en] .conversation-suggestions button{font-size:11px}
+}
+
 /* The same navigation moves between the learning workspace and conversation. */
 [hidden]{display:none!important}
 .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
@@ -139,4 +165,5 @@ summary{transition:color 180ms ease}
   .btn:hover,button[type=submit]:hover{box-shadow:0 5px 14px #26252012}
 }
 @media(hover:none){.btn:hover,button[type=submit]:hover{transform:none}}
+@media(max-width:360px){.masthead{flex-wrap:wrap}.header-side{margin-left:auto}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
