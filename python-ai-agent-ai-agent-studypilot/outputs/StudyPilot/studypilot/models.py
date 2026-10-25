@@ -61,6 +61,8 @@ class StudyProfile:
         d: {"minutes": m, "devices": ["纸笔", "电脑"] if m else ["纸笔"]}
         for d, m in zip(DAYS, (0, 0, 0, 0, 120, 180, 180))
     })
+    # Optional and additive: older profile JSON continues to load without a migration.
+    goal_deadline: str = ""
 
     def validated(self):
         """检查时间、科目和设备，并返回可安全保存的标准字典。"""
@@ -68,6 +70,8 @@ class StudyProfile:
         # 空目标是有效状态：用户可以暂不决定，也可以清空后确认删除。
         data["goals"] = clean_text(self.goals, "学习目标", 2000, required=False)
         data["preference"] = clean_text(self.preference, "学习偏好", 500, False)
+        if self.goal_deadline != "":
+            iso_date(self.goal_deadline, "目标期限")
         if type(self.weekly_hours) not in (int, float) or not math.isfinite(self.weekly_hours) or not 0 < self.weekly_hours <= 40:
             raise ValidationError("每周学习时间须大于 0 且不超过 40 小时。")
         if self.speed not in SPEEDS:

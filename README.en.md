@@ -47,11 +47,47 @@ The Web app supports **English and Simplified Chinese**, light and dark themes, 
 - **People learning alongside work** who want plans that reflect their actual availability and devices.
 - **Developers and self-hosters** who want an inspectable application with local or PostgreSQL-backed storage.
 
+## Implementation status
+
+This table describes the current source. Check the [Phase 1 report](docs/PHASE1_REPORT.md) for validation and deployment status. The Windows ZIP linked above is the frozen `v0.6.0-preview.1` release; it does not automatically receive subsequent source changes.
+
+| Capability | Status |
+| --- | --- |
+| Accounts, isolated learning data, task editing, actual records and export | Implemented |
+| Day/week/session budgets, task deadlines and computer constraints | Implemented in the rule-based scheduler |
+| Optional overall goal deadline and rule-derived conflict adjustments | Implemented in current source |
+| First-use checklist, confirmed-plan next action, discardable previews | Implemented in current Web source |
+| AI read tools, previewed proposals, explicit confirmation and atomic execution receipts | Implemented; real model availability depends on configured providers |
+| Keyed Web task/record retries without duplicate writes | Implemented in current source; older API callers without retry keys are not deduplicated |
+| Partial completion, structured completion criteria and plan undo | Planned for Phase 2; current tasks have notes and three statuses |
+| Knowledge-point quizzes, mastery analysis and review scheduling | Planned for Phase 3; no mastery score is inferred from time spent |
+| Full-account import and automatic synchronization between installations | Not implemented |
+
+## Actual application screenshots
+
+Captured from the current source using a disposable demonstration account. These are real interface screenshots with explicitly entered test tasks; they are not evidence that the same source has been deployed to the hosted website.
+
+<details>
+<summary>Overview and next scheduled step</summary>
+
+![StudyPilot overview showing the next confirmed learning session.](docs/screenshots/overview-desktop.jpg)
+
+</details>
+
+<details>
+<summary>Weekly preview and explicit confirmation</summary>
+
+![StudyPilot weekly preview showing budget totals, bounded sessions and an unchecked confirmation.](docs/screenshots/weekly-plan-desktop.jpg)
+
+</details>
+
+[Mobile screenshot](docs/screenshots/overview-mobile.jpg)
+
 ## What you can do
 
 ### Define your learning direction
 
-Create a learning profile with your goals, subject levels, priorities, learning pace, preferences, and maximum session length. Set available minutes and devices for each day of the week.
+Create a learning profile with your goals, an optional overall target deadline, subject levels, priorities, learning pace, preferences, and maximum session length. Set available minutes and devices for each day of the week. Existing profiles without a target deadline remain valid; an empty deadline keeps the previous task-deadline behavior.
 
 Goals belong to you. Leave them blank while you explore, revise them as priorities change, or clear them when they no longer fit. Profile changes take effect after you review and confirm saving.
 
@@ -67,11 +103,14 @@ The scheduling engine uses explicit rules to create a weekly plan. It considers:
 
 - Your weekly time budget and daily available minutes.
 - Task due dates, task priorities, and subject priorities.
+- The earlier of each task's due date and the optional overall target deadline.
 - Available devices and tasks that require a computer.
 - Your maximum session length.
 - Time already studied and relevant work reserved in other saved weekly plans.
 
-You receive a **preview before anything is saved**. The preview shows proposed sessions, used and remaining minutes, and work that could not be scheduled. When time or device availability is insufficient, the plan explains the constraint rather than silently overbooking your week.
+Among otherwise equal priorities and device requirements, lower reported subject levels receive earlier allocation. Your own duration estimates remain authoritative: a reported level is not converted into an invented mastery score or extra study time. Actual time that fulfils another week's reservation is deducted once. Reservations beyond a changed deadline do not conceal remaining work.
+
+You receive a **preview before anything is saved**. The preview shows proposed sessions, used and remaining minutes, and work that could not be scheduled, including suggested adjustments. When time or device availability is insufficient, the plan explains the constraint rather than silently overbooking your week. Generating a new preview clears the previous confirmation. Discarding it leaves the saved plan intact.
 
 Planning works without a model API key. It produces day-level learning sessions based on time budgets; it does not generate a calendar of exact start and end times.
 
@@ -130,6 +169,8 @@ Conversation messages are held in browser memory and clear on refresh or sign-ou
 3. Add a few tasks with due dates and realistic estimates.
 4. Generate a weekly preview, review unscheduled work, and confirm the plan you want to keep.
 5. Study, log the actual time, and use the progress view to decide what to do next.
+
+The current Web source guides first-time users through profile, task and plan confirmation, then shows the next saved-plan session in Overview. It uses existing account data rather than inserting example goals, tasks or actual minutes. Saved plans remain snapshots; after changing tasks, time, devices or records, generate and confirm a fresh preview.
 
 Choose English or Chinese in the website's language selector. On your first visit, StudyPilot follows your browser language. Manual language and theme choices are remembered in that browser.
 
@@ -192,6 +233,8 @@ Provider addresses and model names are fixed on the server. Eligible rate limits
 
 Request limits and site quotas are persisted on the server rather than reset on a cold start. Responses and tool arguments are validated, and the tool loop has bounded rounds, calls, and execution time. Replies arrive as complete validated responses rather than partial streaming output.
 
+Failed requests retain the current question in the open browser tab so it can be edited and sent again. Automatic model fallback does not execute a proposal. A refresh or sign-out still clears browser-only drafts and chat.
+
 ## Privacy and application safeguards
 
 Before a chat request, the user must consent to sending the question, conversation context, and relevant learning data to the listed model providers. Account credentials are excluded from that context.
@@ -199,6 +242,8 @@ Before a chat request, the user must consent to sending the question, conversati
 The implementation includes account isolation, server-side authorization, same-origin and CSRF checks for changes, salted scrypt password hashes, and HTTP-only session cookies. Secure cookies are enabled on Vercel. Model keys are read on the server; model-call logs record operational metadata rather than prompts, learning content, or keys.
 
 AI output can be incorrect. Ownership checks, input validation, version checks, and explicit confirmation remain part of the save path regardless of the model's suggestions.
+
+The current Web task and study-record forms reuse an account-scoped `Idempotency-Key` after an uncertain response. A successful write and its receipt commit together; reusing the key for different content returns a conflict. This covers retries within the current browser session, not a deliberately new action after refresh. The receipt table is added without replacing existing tables, and the optional deadline is stored in the existing profile JSON. Back up persistent data before deploying an update; export alone does not provide full-account restore.
 
 ## Project structure
 
@@ -225,19 +270,28 @@ From the application directory:
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
+node tests/test_workflow.cjs
 ```
 
 Tests cover account isolation, validation, confirmation, concurrent changes, persistent records, scheduling, quotas, localized HTTP behavior, and model failure handling. Model scenarios use mocked responses, so the automated suite does not consume live model requests. PostgreSQL integration tests require an explicitly configured independent test database; otherwise they are reported as skipped.
+
+Node.js 22+ is needed only for the optional browser-helper checks; the application itself does not need Node or a frontend build. JavaScript files can be checked with `node --check public/study.js` (and the other scripts). Python syntax can be checked with `python -m compileall -q studypilot app.py`. The repository CI runs these checks and the Python suite; no separate type-checker or bundler is configured. Clean-environment installation and test evidence are recorded in the Phase 1 report, not assumed from earlier runs.
 
 When extending StudyPilot, keep user text separate from interface translations, preserve canonical stored values, and route proposed business changes through the existing server confirmation and validation path.
 
 ## Documentation
 
+- [Code audit](docs/PHASE0_AUDIT.md)
+- [Phase 1 changes, validation and remaining work](docs/PHASE1_REPORT.md)
 - [English application guide](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/README.md)
 - [Deployment guide - Chinese](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/DEPLOYMENT.md)
 - [AI integration details - Chinese](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/FREE_AI_ENGINE.md)
 - [Environment variable example](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/.env.example)
 - [Automated test sources](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/tests/)
+
+## Contributing and roadmap
+
+Contributions should include a reproducible issue or a focused pull request, tests for changed business rules, and documentation for changed behavior. Use disposable accounts and mocked model responses; never submit credentials or private learning data. Phase 2 focuses on clearer task execution and rescheduling; Phase 3 will evaluate simple knowledge checks and review rules after those foundations are stable.
 
 ## License
 

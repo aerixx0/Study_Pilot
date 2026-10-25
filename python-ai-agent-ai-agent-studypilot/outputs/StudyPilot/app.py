@@ -68,6 +68,8 @@ def profile_page(db):
                         "- 我希望长期朝哪个方向发展？\n"
                         "- 我每周实际可以投入多少时间？")
             st.caption("这些思考提示不会保存。未提交的草稿切换页面后可能丢失，请先决定是否保存当前档案。")
+        deadline = st.text_input("目标期限（可选，YYYY-MM-DD）", profile.goal_deadline, max_chars=10,
+                                 help="留空代表不设置统一期限。设置后，计划不会超过目标期限或任务截止日期。")
         st.subheader("时间与学习偏好")
         left, right = st.columns(2)
         hours = left.number_input("每周学习时间（小时）", min_value=0.5, max_value=40.0, value=float(profile.weekly_hours), step=0.5)
@@ -90,7 +92,8 @@ def profile_page(db):
             availability[day] = {"minutes": amount, "devices": devices}
         confirmed = st.checkbox("我确认保存以上学习档案")
         if st.form_submit_button("保存档案", type="primary"):
-            updated = StudyProfile(goals, hours, speed, preference, maximum, levels, priorities, availability)
+            updated = StudyProfile(goals, hours, speed, preference, maximum, levels, priorities, availability,
+                                   goal_deadline=deadline)
             commit(lambda: db.save_profile(updated, expected_version=version, confirmed=confirmed), "学习档案已保存。")
 
 

@@ -14,6 +14,12 @@ Open the deployed website and choose **EN** in the top-right corner. On your fir
 4. Log study time only after the study actually happened. Estimates and plans do not count as actual time.
 5. Use Chat to discuss progress, goals, or plans when a model provider is configured. Review and explicitly confirm each proposed change before it can be applied.
 
+The current Web source includes a first-use checklist and shows the next confirmed-plan session on Overview. Profiles support an optional overall goal deadline; older profiles keep an empty deadline without rewriting saved goals. The scheduler uses the earlier of that date and each task's due date, and suggests adjustments when work cannot fit. Reported subject levels break otherwise equal priority/device ties; they do not change your duration estimates or imply mastery.
+
+New previews always start unconfirmed. Discarding one leaves the saved plan unchanged. Web task/record creation uses persistent, account-scoped retry receipts; business writes and receipts commit together. Third-party API clients must reuse `Idempotency-Key` to receive this protection.
+
+See the [audit](../../../docs/PHASE0_AUDIT.md) and [Phase 1 report](../../../docs/PHASE1_REPORT.md) for tests, deployment status and remaining limitations. The Windows ZIP remains a frozen preview, distinct from current source and the hosted deployment.
+
 Switching language keeps form drafts and preserves your own writing. Existing goals, task titles, notes, and conversations stay in their original language. AI is instructed to reply in your selected language; previously generated replies are not rewritten.
 
 ## Running the Web app locally
@@ -43,9 +49,12 @@ Before a chat request, you must consent to sending the question, conversation co
 ```powershell
 pip install -r requirements-dev.txt
 python -m unittest discover -s tests -v
+node tests/test_workflow.cjs
 ```
 
 Tests use disposable accounts and mocked model responses. PostgreSQL integration tests require a separate test database and otherwise report a skip.
+
+Node.js 22+ is optional for the browser-helper tests, not needed to run the app. There is no frontend build step. Check Python syntax with `python -m compileall -q studypilot app.py` and scripts with `node --check public/study.js` (repeat for other JavaScript files).
 
 UI translations live in `public/i18n.js`; server error translations live in `studypilot/i18n.py`. Translate explicit interface strings only. Keep user text, stored enum values, request authorization, and confirmation logic unchanged.
 

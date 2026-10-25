@@ -16,6 +16,10 @@ def request_language(request):
 
 
 MESSAGES = {
+    "AI 服务暂时不可用，请稍后重试；已有建议仍需你核对确认。": "AI services are temporarily unavailable. Try again later; existing suggestions still need your confirmation.",
+    "重试标识无效，请刷新后重新提交。": "This retry identifier is invalid. Refresh the page and submit again.",
+    "此重试标识已用于不同内容，请重新提交。": "This retry identifier was already used for different content. Submit a new operation.",
+    "所选日期超出可支持的计划范围。": "This date is outside the supported planning range. Choose a different date.",
     "请求来源无效，请从本站页面重新提交。": "Invalid request origin. Submit this request from the StudyPilot website.",
     "请使用 JSON 请求。": "This request must use JSON.",
     "提交内容过大，请缩小范围。": "This request is too large. Please reduce its size.",
@@ -94,6 +98,7 @@ MESSAGES = {
 }
 
 FIELDS = {
+    "目标期限": "Target deadline",
     "问题": "Question", "学习目标": "Learning goals", "学习偏好": "Learning preferences", "单次学习时长": "Session length",
     "任务标题": "Task title", "任务备注": "Task notes", "截止日期": "Due date", "预计时长": "Estimated duration",
     "昵称": "Display name", "个性签名": "Bio", "备注": "Notes", "实际分钟": "Actual minutes", "实际学习日期": "Study date",
@@ -107,6 +112,14 @@ def error_text(message, language):
         return message
     if message in MESSAGES:
         return MESSAGES[message]
+    if message.startswith("AI 服务暂时不可用（") and message.endswith("），请稍后重试；已有建议仍需你核对确认。"):
+        # Only translate allowlisted error categories; never echo provider text.
+        categories = {"限流": "rate limit", "超时": "timeout", "连接失败": "connection failure",
+                      "服务异常": "service error", "服务错误": "service error", "服务端错误": "service error",
+                      "认证失败": "service configuration", "响应格式": "invalid response"}
+        kinds = list(dict.fromkeys(label for key, label in categories.items() if key in message))
+        detail = " (" + ", ".join(kinds) + ")" if kinds else ""
+        return "AI services are temporarily unavailable" + detail + ". Try again later; existing suggestions still need your confirmation."
     patterns = (
         (r"(.+)必须是文字。", "{field} must be text."),
         (r"请填写(.+)。", "Enter {field}."),

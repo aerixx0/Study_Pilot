@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from datetime import date, datetime, timezone
 import json
 import hashlib
+import re
 from pathlib import Path
 import sqlite3
 
@@ -63,7 +64,7 @@ class Database:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
             if version not in (0, 1):
                 raise ValidationError("数据库版本较新，请使用匹配版本的 StudyPilot。")
-            required = {"profile", "tasks", "study_sessions", "task_events", "schedule_plans", "sessions_date", "tasks_due", "agent_proposals"}
+            required = {"profile", "tasks", "study_sessions", "task_events", "schedule_plans", "sessions_date", "tasks_due", "agent_proposals", "request_receipts"}
             existing = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type IN ('table','index')")}
             if version == 1 and required <= existing:
                 return
@@ -114,6 +115,10 @@ class Database:
                     request_id TEXT NOT NULL, call_id TEXT NOT NULL,
                     UNIQUE(request_id,call_id)
                 );
+                CREATE TABLE IF NOT EXISTS request_receipts (
+                    request_id TEXT PRIMARY KEY, action TEXT NOT NULL,
+                    payload_hash TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL
+                );
                 PRAGMA user_version = 1;
             """)
 
@@ -161,9 +166,30 @@ class Database:
         snapshot = dict(conn.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone())
         conn.execute("INSERT INTO task_events(task_id, action, snapshot, created_at) VALUES (?, ?, ?, ?)", (task_id, action, json.dumps(snapshot, ensure_ascii=False), now_utc()))
 
-    def create_task(self, task: TaskInput, *, confirmed=False, _connection=None):
+    def _idempotent_write(self, request_id, action, data, write):
+        """Account-scoped receipt and business write commit or roll back together."""
+        if not isinstance(request_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", request_id):
+            raise ValidationError("重试标识无效，请刷新后重新提交。")
+        digest = hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True,
+                                          allow_nan=False).encode("utf-8")).hexdigest()
+        with self.connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            receipt = conn.execute("SELECT * FROM request_receipts WHERE request_id=?", (request_id,)).fetchone()
+            if receipt:
+                if receipt["action"] != action or receipt["payload_hash"] != digest:
+                    raise ConflictError("此重试标识已用于不同内容，请重新提交。")
+                return json.loads(receipt["result"])
+            result = write(conn)
+            conn.execute("INSERT INTO request_receipts VALUES (?,?,?,?,?)",
+                         (request_id, action, digest, json.dumps(result), now_utc()))
+            return result
+
+    def create_task(self, task: TaskInput, *, confirmed=False, request_id=None, _connection=None):
         require_confirmation(confirmed)
         data = task.validated()
+        if request_id is not None:
+            return self._idempotent_write(request_id, "create_task", data,
+                lambda conn: self.create_task(task, confirmed=True, _connection=conn))
         timestamp = now_utc()
         with self._write_connection(_connection) as conn:
             result = conn.execute("""INSERT INTO tasks
@@ -194,7 +220,7 @@ class Database:
                 raise ConflictError("任务已被修改或删除，请刷新后重新确认。")
             self._event(conn, task_id, "删除")
 
-    def log_session(self, task_id, study_date, duration, note="", *, confirmed=False, _connection=None):
+    def log_session(self, task_id, study_date, duration, note="", *, confirmed=False, request_id=None, _connection=None):
         """按实际发生的日期记录时长；不会自动完成任务，也不填造历史。"""
         require_confirmation(confirmed)
         iso_date(study_date, "学习日期")
@@ -202,6 +228,10 @@ class Database:
             raise ValidationError("实际学习日期不能在未来。")
         minutes(duration, "实际学习时长")
         note = clean_text(note, "学习记录备注", 1000, False)
+        if request_id is not None:
+            data = dict(task_id=task_id, study_date=study_date, duration=duration, note=note)
+            return self._idempotent_write(request_id, "log_session", data,
+                lambda conn: self.log_session(task_id, study_date, duration, note, confirmed=True, _connection=conn))
         with self._write_connection(_connection) as conn:
             row = conn.execute("SELECT subject FROM tasks WHERE id=? AND deleted_at IS NULL", (task_id,)).fetchone()
             if row is None:

@@ -244,6 +244,10 @@ def create_app(auth_factory=None):
     def motion_file():
         return FileResponse(ROOT/"public"/"motion.js", media_type="text/javascript")
 
+    @app.get("/workflow.js")
+    def workflow_file():
+        return FileResponse(ROOT/"public"/"workflow.js", media_type="text/javascript")
+
     @app.get("/learning-map.svg")
     def image_file():
         return FileResponse(ROOT/"assets"/"learning-map.svg", media_type="image/svg+xml")
@@ -303,7 +307,9 @@ def create_app(auth_factory=None):
     @app.post("/api/profile")
     def profile(body: ProfileChange, ctx=Depends(context)):
         try:
-            data = StudyProfile(**body.profile)
+            # An older client must not silently clear a newly introduced field.
+            current, _ = learning(ctx).get_study_profile()
+            data = StudyProfile(**{"goal_deadline": current.goal_deadline, **body.profile})
         except TypeError:
             raise ValidationError("学习档案字段不正确。") from None
         learning(ctx).save_profile(data, expected_version=body.expected_version, confirmed=body.confirmed)
@@ -316,8 +322,9 @@ def create_app(auth_factory=None):
             raise ValidationError("任务字段不正确。") from None
 
     @app.post("/api/tasks")
-    def create_task(body: TaskChange, ctx=Depends(context)):
-        return dict(task_id=learning(ctx).create_task(task_input(body.task), confirmed=body.confirmed))
+    def create_task(body: TaskChange, request: Request, ctx=Depends(context)):
+        return dict(task_id=learning(ctx).create_task(task_input(body.task), confirmed=body.confirmed,
+                                                    request_id=request.headers.get("idempotency-key")))
 
     @app.put("/api/tasks/{task_id}")
     def update_task(task_id: int, body: TaskChange, ctx=Depends(context)):
@@ -330,8 +337,9 @@ def create_app(auth_factory=None):
         return {"ok": True}
 
     @app.post("/api/records")
-    def record(body: RecordChange, ctx=Depends(context)):
-        return dict(session_id=learning(ctx).log_session(body.task_id, body.study_date, body.minutes, body.note, confirmed=body.confirmed))
+    def record(body: RecordChange, request: Request, ctx=Depends(context)):
+        return dict(session_id=learning(ctx).log_session(body.task_id, body.study_date, body.minutes, body.note,
+                    confirmed=body.confirmed, request_id=request.headers.get("idempotency-key")))
 
     @app.delete("/api/records/{record_id}")
     def delete_record(record_id: int, body: Confirm, ctx=Depends(context)):

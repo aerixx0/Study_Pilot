@@ -46,7 +46,8 @@ def stage_proposal(auth, token, action, data, reason, *, request_id, call_id):
         profile, version = db.get_study_profile()
         if type(data["expected_version"]) is not int or data["expected_version"] != version:
             raise ConflictError("学习档案已变化，请重新读取后生成提案。")
-        payload.update(before=profile.validated(), after=StudyProfile(**data["profile"]).validated(), expected_version=version)
+        updated = {"goal_deadline": profile.goal_deadline, **data["profile"]}
+        payload.update(before=profile.validated(), after=StudyProfile(**updated).validated(), expected_version=version)
     elif action == "log_session":
         day = iso_date(data["study_date"], "实际学习日期")
         if day > date.today().isoformat():

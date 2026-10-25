@@ -34,7 +34,8 @@ def render_plan(plan):
     if plan["unscheduled"]:
         st.warning("部分任务未能全部安排；已安排的部分仍可保存。")
         st.dataframe([{"任务": item["title"], "已安排分钟": item["planned_minutes"],
-                       "尚余分钟": item["remaining_minutes"], "原因": item["reason"]}
+                       "尚余分钟": item["remaining_minutes"], "原因": item["reason"],
+                       "可调整方式": item.get("suggestion", "核对时间、设备和截止日期后重新预览。")}
                       for item in plan["unscheduled"]], hide_index=True, width="stretch")
     if plan["notices"]:
         with st.expander("无需新增安排的任务"):

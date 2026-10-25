@@ -29,6 +29,7 @@ DATE = text(10, format="date")
 TASK = obj(dict(title=text(120), subject=choice(SUBJECTS), due_date=DATE, estimated_minutes=integer(1, 1440),
                 priority=choice(PRIORITIES), status=choice(STATUSES), requires_computer={"type": "boolean"}, notes=text(2000)))
 PROFILE = obj(dict(goals=text(2000), weekly_hours={"type": "number", "exclusiveMinimum": 0, "maximum": 40},
+                   goal_deadline=text(10),
                    speed=choice(SPEEDS), preference=text(500), max_session_minutes=integer(1, 180),
                    levels=obj({subject: choice(LEVELS) for subject in SUBJECTS}),
                    priorities=obj({subject: choice(PRIORITIES) for subject in SUBJECTS}),

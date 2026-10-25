@@ -3,11 +3,18 @@
 from collections import defaultdict
 from datetime import date, timedelta
 
+from .models import ValidationError
+
 
 def week_bounds(day: date):
     """date.weekday(): 周一是 0；先找到周一，再计算下一周周一。"""
-    start = day - timedelta(days=day.weekday())
-    return start, start + timedelta(days=7)
+    if type(day) is not date:
+        raise ValidationError("请选择有效的计划日期。")
+    try:
+        start = day - timedelta(days=day.weekday())
+        return start, start + timedelta(days=7)
+    except OverflowError:
+        raise ValidationError("所选日期超出可支持的计划范围。") from None
 
 
 def get_progress(tasks, sessions, day: date):

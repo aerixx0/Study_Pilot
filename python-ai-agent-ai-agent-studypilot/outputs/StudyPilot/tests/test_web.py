@@ -192,6 +192,52 @@ class WebTests(unittest.TestCase):
             self.assertEqual(sum(results), 2)
 
 
+    def test_keyed_task_and_record_retries_create_once_and_reject_payload_reuse(self):
+        headers={**self.headers,"Idempotency-Key":"web-retry-request-key-1234"}
+        body=dict(task=self.task,confirmed=True)
+        first=self.client.post("/api/tasks",json=body,headers=headers)
+        repeated=self.client.post("/api/tasks",json=body,headers=headers)
+        self.assertEqual(first.status_code,200,first.text)
+        self.assertEqual(first.json(),repeated.json())
+        self.assertEqual(len(self.db.get_tasks()),1)
+        changed=dict(task={**self.task,"title":"Different action"},confirmed=True)
+        self.assertEqual(self.client.post("/api/tasks",json=changed,headers=headers).status_code,409)
+        self.assertEqual(self.client.post("/api/tasks",json={**body,"confirmed":False},headers=headers).status_code,400)
+        record=dict(task_id=first.json()["task_id"],study_date=date.today().isoformat(),minutes=19,confirmed=True)
+        headers["Idempotency-Key"]="web-record-retry-key-1234"
+        saved=self.client.post("/api/records",json=record,headers=headers)
+        self.assertEqual(saved.status_code,200,saved.text)
+        self.assertEqual(saved.json(),self.client.post("/api/records",json=record,headers=headers).json())
+        self.assertEqual(sum(r["minutes"] for r in self.db.get_sessions()),19)
+
+    def test_optional_goal_deadline_old_clients_and_boundary_dates(self):
+        deadline=date.today().replace(year=date.today().year+1).isoformat()
+        profile=asdict(StudyProfile(goal_deadline=deadline))
+        self.assertEqual(self.call("/profile",dict(profile=profile,expected_version=0,confirmed=True)).status_code,200)
+        legacy={k:v for k,v in profile.items() if k!="goal_deadline"}
+        self.assertEqual(self.call("/profile",dict(profile=legacy,expected_version=1,confirmed=True)).status_code,200)
+        state=self.client.get("/api/state").json()
+        self.assertEqual(state["profile"]["goal_deadline"],deadline)
+        self.assertEqual(state["profile"]["goals"],"")
+        self.assertEqual(self.client.get("/api/plans/preview?week_of=9999-12-31").status_code,400)
+        invalid={**profile,"goal_deadline":"2026-02-30"}
+        self.assertEqual(self.call("/profile",dict(profile=invalid,expected_version=2,confirmed=True)).status_code,400)
+        self.assertEqual(self.client.get("/api/state").json()["profile"]["goal_deadline"],deadline)
+        self.assertEqual(self.client.get("/workflow.js").status_code,200)
+
+    def test_database_failure_returns_safe_error_and_retry_keeps_one_write(self):
+        headers={**self.headers,"Idempotency-Key":"web-failed-request-key-1234"}
+        body=dict(task=self.task,confirmed=True)
+        with patch("studypilot.database.Database._event",side_effect=sqlite3.OperationalError("private storage detail")):
+            failed=self.client.post("/api/tasks",json=body,headers=headers)
+        self.assertEqual(failed.status_code,503)
+        self.assertNotIn("private storage detail",failed.text)
+        self.assertEqual(self.db.get_tasks(),[])
+        self.assertEqual(self.client.post("/api/tasks",json=body,headers=headers).status_code,200)
+        self.assertEqual(self.client.post("/api/tasks",json=body,headers=headers).status_code,200)
+        self.assertEqual(len(self.db.get_tasks()),1)
+
+
 @unittest.skipUnless(os.getenv("STUDYPILOT_TEST_POSTGRES"),"需显式提供独立测试 PostgreSQL URL")
 class PostgresWebTests(WebTests):
     def setUp(self):

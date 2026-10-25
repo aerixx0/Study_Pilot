@@ -47,6 +47,10 @@ CREATE TABLE IF NOT EXISTS ai_site_usage (
 );
 """
 STUDY_DDL = """
+CREATE TABLE IF NOT EXISTS request_receipts (
+ request_id TEXT PRIMARY KEY, action TEXT NOT NULL,
+ payload_hash TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS profile (
  id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL,
  version INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL

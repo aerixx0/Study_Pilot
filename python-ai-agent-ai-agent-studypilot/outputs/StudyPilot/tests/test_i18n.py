@@ -89,6 +89,15 @@ class EnglishWebTests(unittest.TestCase):
             self.assertEqual(task["title"], payload["title"])
             self.assertEqual(task["subject"], "数学")
 
+    def test_provider_failure_categories_are_explained_without_echoing_unknown_text(self):
+        from studypilot.i18n import error_text
+        message="AI 服务暂时不可用（智谱 GLM-4.7-Flash 限流、硅基流动 Xing4.0-29B 超时），请稍后重试；已有建议仍需你核对确认。"
+        text=error_text(message,"en")
+        self.assertIn("rate limit",text)
+        self.assertIn("timeout",text)
+        message="AI 服务暂时不可用（private upstream detail），请稍后重试；已有建议仍需你核对确认。"
+        self.assertNotIn("private upstream detail",error_text(message,"en"))
+
     def test_ai_language_is_validated_and_consent_is_required(self):
         with patch("studypilot.web.run_agent") as agent:
             for payload, status in (({"prompt": "Hello", "language": "en", "consent": False}, 400),

@@ -1,0 +1,37 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+const sandbox = {window:{},crypto:require("node:crypto").webcrypto};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../public/workflow.js"),"utf8"),sandbox);
+const workflow = sandbox.window.StudyWorkflow;
+const body={task:{title:"My exact title"},confirmed:true};
+const first=workflow.retryKey("/tasks",body);
+assert.match(first,/^[a-f0-9]{32}$/);
+assert.equal(workflow.retryKey("/tasks",JSON.parse(JSON.stringify(body))),first,"A network or refresh failure must retain the retry key");
+assert.notEqual(workflow.retryKey("/tasks",{...body,task:{title:"Changed"}}),first);
+workflow.complete("/tasks",body);
+assert.notEqual(workflow.retryKey("/tasks",body),first,"A deliberately new operation gets a new key");
+const beforeSignOut=workflow.retryKey("/records",body);
+workflow.clear();
+assert.notEqual(workflow.retryKey("/records",body),beforeSignOut);
+assert.notEqual(workflow.retryKey("/tasks",body),workflow.retryKey("/records",body));
+assert.notEqual(workflow.retryKey("/tasks",body),workflow.retryKey("/tasks",{...body,confirmed:false}));
+
+const state={profile:{goal_deadline:"2026-10-25"},tasks:[{id:1,title:"My task",notes:"Read and solve one exercise",status:"待开始",due_date:"2026-10-25"}],
+  records:[],plans:[{payload:{entries:[{task_id:1,date:"2026-10-25",minutes:20},{task_id:1,date:"2026-10-25",minutes:20}]}}]};
+assert.equal(workflow.nextAction(state,"2026-10-25").title,"My task");
+state.records=[{task_id:1,study_date:"2026-10-25",minutes:25}];
+assert.equal(workflow.nextAction(state,"2026-10-25").minutes,15,"Actual time fulfils split sessions once, not twice");
+state.records[0].minutes=40;
+assert.equal(workflow.nextAction(state,"2026-10-25"),null);
+state.records=[];
+state.tasks[0].status="已完成";
+assert.equal(workflow.nextAction(state,"2026-10-25"),null);
+state.tasks[0].status="待开始";
+state.profile.goal_deadline="2026-10-24";
+assert.equal(workflow.nextAction(state,"2026-10-25"),null);
+assert.equal(workflow.nextAction({...state,plans:[]},"2026-10-25"),null);
+assert.equal(workflow.nextAction({...state,profile:{goal_deadline:""}},"2026-10-26"),null,"Past sessions must not be shown as today's next action");
+console.log("PASS: browser retry lifecycle and next-action constraints (14 assertions).");

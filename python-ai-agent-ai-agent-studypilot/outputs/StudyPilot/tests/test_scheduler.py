@@ -67,7 +67,8 @@ class SchedulerTests(unittest.TestCase):
     def test_remaining_duration_uses_lifetime_actual_and_other_week_reservations(self):
         actual = [dict(task_id=1, study_date="2026-10-18", minutes=25)]
         reservations = [dict(task_id=1, date="2026-10-26", minutes=30)]
-        result = self.generate([task(1, 70)], sessions=actual, reservations=reservations)
+        # The reserved date must still be valid under the task's deadline.
+        result = self.generate([task(1, 70, due="2026-11-01")], sessions=actual, reservations=reservations)
         self.assertEqual(result["actual_minutes"], 0)
         self.assertEqual(result["planned_minutes"], 15)
 
