@@ -2,6 +2,7 @@
 // Only explicit UI strings pass through this catalogue. User text is never translated.
 window.StudyI18n = (() => {
   const english = {
+  "个人资料、账号安全和数据管理。": "Manage your profile, account security, and learning data.",
   "问题已保留，可修改后重新发送。": "Your question is kept. You can edit it and send it again.",
   "各科基础与优先级（可展开调整）": "Subject levels and priorities (expand to adjust)",
   "目标期限": "Target deadline",

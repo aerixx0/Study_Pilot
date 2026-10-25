@@ -137,7 +137,6 @@ Selecting English or Simplified Chinese also sets the requested AI reply languag
 Each account has its own learning profile, tasks, records, plans, and proposals. Account settings include:
 
 - Display name, avatar marker, and bio.
-- Sign-in username changes with current-password verification.
 - Password changes and recovery-code password resets.
 - Active-session review and signing out other sessions.
 - Export of your learning data without passwords, recovery codes, or session tokens.

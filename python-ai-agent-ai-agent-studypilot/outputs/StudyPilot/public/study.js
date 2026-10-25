@@ -143,7 +143,7 @@ function records(){
 }
 function account(){
   const p=data.personal;
-  return head("06 / YOUR ACCOUNT",T("账号与安全"),T("个人资料、账号安全和数据管理。昵称与登录用户名相互独立。"))+'<form id="personal-'+p.version+'" data-kind="personal" data-version="'+p.version+T('" class="card"><h3>个人资料</h3><div class="grid">')+input("nickname",T("昵称"),p.nickname,"text",'maxlength="64" required')+select("avatar",T("头像标识"),me.options.avatars,p.avatar)+'</div>'+input("bio",T("个性签名"),p.bio,"text",'maxlength="120"')+confirm()+submit(T("保存个人资料"))+T('</form><details><summary>修改登录用户名</summary><form id="username-change" data-kind="username" data-username="')+E(me.account.username)+'">'+input("new_username",T("新用户名"),me.account.username,"text",'maxlength="64" required')+input("current_password",T("当前密码"),"","password",'autocomplete="current-password" required')+confirm(T("我确认修改登录用户名，并让其他会话退出"))+submit(T("修改登录用户名"))+T('</form></details><details><summary>修改密码</summary><form id="password-change" data-kind="password">')+input("current_password",T("当前密码"),"","password",'autocomplete="current-password" required')+input("new_password",T("新密码"),"","password",'autocomplete="new-password" maxlength="128" required')+input("password_again",T("再次输入新密码"),"","password",'autocomplete="new-password" required')+confirm(T("我确认更新密码和恢复码，并退出全部旧会话"))+submit(T("更新密码"))+T('</form></details><details><summary>登录会话管理</summary><button class="btn" data-action="load-sessions">查看有效登录会话</button><div id="session-list">')+sessionList()+'</div><form id="revoke-sessions" data-kind="revoke-sessions">'+confirm(T("我确认退出其他登录会话"))+submit(T("退出其他会话"))+T('</form></details><div class="card"><h3>个人学习数据</h3><p class="muted">导出自己的资料、任务、记录、计划、提案与执行收据。不包含密码、恢复码和登录令牌。</p><a class="btn" href="/api/export" download="StudyPilot-export.json">导出学习数据</a></div>');
+  return head("06 / YOUR ACCOUNT",T("账号与安全"),T("个人资料、账号安全和数据管理。"))+'<form id="personal-'+p.version+'" data-kind="personal" data-version="'+p.version+T('" class="card"><h3>个人资料</h3><div class="grid">')+input("nickname",T("昵称"),p.nickname,"text",'maxlength="64" required')+select("avatar",T("头像标识"),me.options.avatars,p.avatar)+'</div>'+input("bio",T("个性签名"),p.bio,"text",'maxlength="120"')+confirm()+submit(T("保存个人资料"))+T('</form><details><summary>修改密码</summary><form id="password-change" data-kind="password">')+input("current_password",T("当前密码"),"","password",'autocomplete="current-password" required')+input("new_password",T("新密码"),"","password",'autocomplete="new-password" maxlength="128" required')+input("password_again",T("再次输入新密码"),"","password",'autocomplete="new-password" required')+confirm(T("我确认更新密码和恢复码，并退出全部旧会话"))+submit(T("更新密码"))+T('</form></details><details><summary>登录会话管理</summary><button class="btn" data-action="load-sessions">查看有效登录会话</button><div id="session-list">')+sessionList()+'</div><form id="revoke-sessions" data-kind="revoke-sessions">'+confirm(T("我确认退出其他登录会话"))+submit(T("退出其他会话"))+T('</form></details><div class="card"><h3>个人学习数据</h3><p class="muted">导出自己的资料、任务、记录、计划、提案与执行收据。不包含密码、恢复码和登录令牌。</p><a class="btn" href="/api/export" download="StudyPilot-export.json">导出学习数据</a></div>');
 }
 function sessionList(){return sessions.length?table([T("登录时间"),T("最近活动"),T("会话")],sessions.map(s=>[E(StudyI18n.timestamp(s.created_at)),E(StudyI18n.timestamp(s.last_seen)),s.current?T("当前"):T("其他")])):"";}
 function proposal(p){
@@ -192,7 +192,6 @@ async function submitForm(form){
   }else if(kind==="plan-save"){path="/plans";if(!preview)throw new Error(T("请先生成计划预览。"));Object.assign(body,preview);
   }else if(kind==="plan-delete"){path="/plans/"+form.dataset.week;method="DELETE";body.expected_version=Number(form.dataset.version);success=T("此周计划已删除。");
   }else if(kind==="personal"){path="/personal";Object.assign(body,{expected_version:Number(form.dataset.version),nickname:get("nickname"),avatar:get("avatar"),bio:get("bio")});
-  }else if(kind==="username"){path="/username";Object.assign(body,{new_username:get("new_username"),current_password:get("current_password"),expected_username:form.dataset.username});
   }else if(kind==="password"){
     const result=await api("/password","POST",{...body,current_password:get("current_password"),new_password:get("new_password"),password_again:get("password_again")});clearPrivate();recoveryCode=result.recovery_code;render();return;
   }else if(kind==="revoke-sessions"){path="/sessions/revoke";success=T("其他会话已退出。");
@@ -213,7 +212,6 @@ async function submitForm(form){
   await api(path,method,body);
   saveDrafts();drafts.delete(form.id);
   if(kind==="plan-save")preview=null;
-  if(kind==="username")me=await api("/me");
   if(kind==="revoke-sessions")sessions=await api("/sessions");
   await refresh();
   if(kind==="task-create"||kind==="record-create")StudyWorkflow.complete(path,body);

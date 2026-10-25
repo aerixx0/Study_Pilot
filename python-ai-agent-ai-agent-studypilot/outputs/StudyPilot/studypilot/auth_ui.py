@@ -124,21 +124,6 @@ def account_settings(auth, account):
             except (AuthError, ValidationError, ConflictError, ConfirmationRequired) as exc:
                 st.error(str(exc))
     st.subheader("账号与安全")
-    with st.expander("修改登录用户名"):
-        st.caption("昵称和登录用户名相互独立。修改后保留学习数据与账号权限，其他登录会话会退出；恢复码继续有效。")
-        with st.form("change_username_form", clear_on_submit=False):
-            new_username = st.text_input("新的登录用户名", value=account.username, max_chars=USERNAME_MAX_LENGTH, key="rename_username")
-            current = st.text_input("验证当前密码", type="password", max_chars=128, key="rename_password")
-            confirmed = st.checkbox("我确认修改登录用户名并退出其他会话", key="rename_confirm")
-            if st.form_submit_button("保存登录用户名"):
-                try:
-                    token = st.session_state.get("auth_token")
-                    auth.change_username(token, new_username, current, expected_username=account.username, confirmed=confirmed)
-                    clear_account_state()
-                    st.session_state.update(auth_token=token, navigation="账号设置", notice="登录用户名已更新，其他会话已退出。")
-                    st.rerun()
-                except (AuthError, ValidationError, ConflictError, ConfirmationRequired) as exc:
-                    st.error(str(exc))
     st.caption("密码更新后，所有旧会话与旧恢复码都会失效，请保存新的恢复码。")
     with st.form("change_password_form", clear_on_submit=False):
         current = st.text_input("当前密码", type="password", max_chars=128, key="change_current")

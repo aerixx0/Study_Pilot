@@ -160,23 +160,12 @@ class AccountSettingsUITests(unittest.TestCase):
         self.assertTrue(any("小树同学" in item.value for item in self.app.caption))
         self.assertEqual(self.app.text_input(key="personal_1_bio").value, "每天进步一点")
 
-    def test_rename_login_username_and_revoke_other_sessions(self):
+    def test_revoke_other_sessions_preserves_current_session(self):
         self.auth.register("student", PASSWORD, confirmed=True)
         self.login()
         token = self.app.session_state["auth_token"]
-        extra = self.auth.login("student", PASSWORD)
+        next_session = self.auth.login("student", PASSWORD)
         self.app.radio(key="navigation").set_value("账号设置").run()
-        self.app.text_input(key="rename_username").set_value("新登录名")
-        self.app.text_input(key="rename_password").set_value(PASSWORD)
-        self.click("保存登录用户名")
-        self.assertTrue(self.app.error)
-        self.assertEqual(self.app.text_input(key="rename_username").value, "新登录名")
-        self.app.checkbox(key="rename_confirm").check()
-        self.click("保存登录用户名")
-        self.assertEqual(self.auth.authenticate(token).username, "新登录名")
-        self.assertIsNone(self.auth.authenticate(extra))
-        self.assertEqual(self.app.text_input(key="rename_password").value, "")
-        next_session = self.auth.login("新登录名", PASSWORD)
         self.click("退出其他会话")
         self.assertTrue(self.app.error)
         self.assertIsNotNone(self.auth.authenticate(next_session))
