@@ -4,294 +4,178 @@
 
 ### Turn learning into progress.
 
-A personal learning workspace for clear goals, practical weekly plans, and progress grounded in real study time.
+Plan a realistic study week, know your next task, and track the work you actually do.
 
-[Open StudyPilot](https://study-pilot-olive.vercel.app/) · [Features](#what-you-can-do) · [Run locally](#run-the-web-app-locally) · [Deployment](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/DEPLOYMENT.md) · [MIT License](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/LICENSE)
+**[Open the website](https://study-pilot-olive.vercel.app/) · [Download for Windows](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.2/StudyPilot-Windows-v0.6.0-preview.2.zip) · [Release notes](https://github.com/aerixx0/Study_Pilot/releases/tag/v0.6.0-preview.2)**
 
 </div>
 
----
+## Start here
 
-## Open StudyPilot
-
-### Use the website — no installation
+### Open the website
 
 **[https://study-pilot-olive.vercel.app/](https://study-pilot-olive.vercel.app/)**
 
-Open the link in your browser, create an account, and start learning. The website supports English and Simplified Chinese.
+No installation is required. Register an account and choose English or Simplified Chinese.
 
-### Download for Windows
+### Download the Windows app
 
-**[Download StudyPilot for Windows (.zip)](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.1/StudyPilot-Windows-v0.6.0-preview.1.zip)**
+**Local app support is currently Windows only. No macOS or Linux local packages are provided.**
 
-1. Install **Python 3.12 or later** from [python.org](https://www.python.org/downloads/windows/). With the classic installer, enable **Add python.exe to PATH**.
-2. Download the ZIP above, right-click it, choose **Extract All**, and open the extracted `StudyPilot-Windows` folder.
-3. Double-click **`Start-StudyPilot.cmd`**. On first launch, keep the window open while dependencies download. The local app then opens in your browser at **[http://127.0.0.1:8501/](http://127.0.0.1:8501/)**.
+The Windows package runs locally in your browser. It requires **Python 3.12 or later** and an internet connection for first-time dependency setup. The local Streamlit interface is currently Chinese. This is a source ZIP with a launcher, not a standalone EXE installer.
 
-This download runs locally in your browser and requires Python and an internet connection for initial setup. It is **not a standalone `.exe` installer**. Its Streamlit interface is currently Chinese; use the website for English. Local and website accounts are separate.
+**[Download StudyPilot for Windows (.zip)](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.2/StudyPilot-Windows-v0.6.0-preview.2.zip)**
 
-[Windows instructions and troubleshooting](Usage.md) · [Release notes](https://github.com/aerixx0/Study_Pilot/releases/tag/v0.6.0-preview.1)
+Or copy this single command into **Windows PowerShell** to download the ZIP to your **Desktop**:
 
-## What is StudyPilot?
+```powershell
+$studyPilotZip = Join-Path ([Environment]::GetFolderPath('Desktop')) 'StudyPilot-Windows-v0.6.0-preview.2.zip'; Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.2/StudyPilot-Windows-v0.6.0-preview.2.zip' -OutFile $studyPilotZip
+```
 
-StudyPilot brings the personal learning cycle into one place: decide what matters, turn it into tasks, make room for those tasks in your week, and record what you actually did.
+1. Install [Python 3.12+ for Windows](https://www.python.org/downloads/windows/). Enable **Add python.exe to PATH** if offered by the installer.
+2. Right-click the downloaded ZIP and choose **Extract All**.
+3. Open **`StudyPilot-Windows`** and double-click **`Start-StudyPilot.cmd`**. Keep its window open while dependencies install.
+4. The browser opens **[http://127.0.0.1:8501/](http://127.0.0.1:8501/)** when ready. Press **Ctrl+C** in the startup window to stop; double-click the launcher to reopen.
 
-It combines structured learning management with an optional AI conversation workspace. Manage your learning without AI, or use Chat to discuss goals, understand progress, and review suggested changes. Your saved goals and tasks remain under your control.
+[Detailed Windows instructions and troubleshooting](Usage.md)
 
-The Web app supports **English and Simplified Chinese**, light and dark themes, desktop and mobile layouts, and a dedicated chat workspace with animated sidebar navigation. Use the hosted website, deploy your own instance, or run locally with persistent storage.
+## What StudyPilot helps you do
 
-## Who it is for
-
-- **Independent learners** working through courses, books, and practical projects.
-- **Students preparing for exams** who need to balance priorities, due dates, and limited time.
-- **People learning alongside work** who want plans that reflect their actual availability and devices.
-- **Developers and self-hosters** who want an inspectable application with local or PostgreSQL-backed storage.
-
-## Implementation status
-
-This table describes the current source. Check the [Phase 1 report](docs/PHASE1_REPORT.md) for validation and deployment status. The Windows ZIP linked above is the frozen `v0.6.0-preview.1` release; it does not automatically receive subsequent source changes.
-
-| Capability | Status |
+| Your need | Current functionality |
 | --- | --- |
-| Accounts, isolated learning data, task editing, actual records and export | Implemented |
-| Day/week/session budgets, task deadlines and computer constraints | Implemented in the rule-based scheduler |
-| Optional overall goal deadline and rule-derived conflict adjustments | Implemented in current source |
-| First-use checklist, confirmed-plan next action, discardable previews | Implemented in current Web source |
-| AI read tools, previewed proposals, explicit confirmation and atomic execution receipts | Implemented; real model availability depends on configured providers |
-| Keyed Web task/record retries without duplicate writes | Implemented in current source; older API callers without retry keys are not deduplicated |
-| Partial completion, structured completion criteria and plan undo | Planned for Phase 2; current tasks have notes and three statuses |
-| Knowledge-point quizzes, mastery analysis and review scheduling | Planned for Phase 3; no mastery score is inferred from time spent |
-| Full-account import and automatic synchronization between installations | Not implemented |
+| Know where to begin | The Web first-use checklist guides you through profile, tasks and plan confirmation, then shows the next saved session. |
+| Plan around real life | Set a weekly budget, daily minutes, available devices, session length and an optional overall target deadline. |
+| Make tasks manageable | Add due dates, estimates, priorities, notes, status and computer requirements. Edit tasks as your needs change. |
+| Keep plans feasible | A rule-based scheduler checks daily/weekly/session limits and the earlier target/task deadline. Unscheduled work includes reasons and suggested adjustments. |
+| See actual effort | Log time only after studying. Charts separate actual study time from estimates and planned sessions. |
+| Get optional AI help | Discuss learning in Chat, Goal Coach or Plan Builder mode. Inspect proposed changes before deciding whether to apply them. |
+| Control your account | Edit your display name, avatar and bio; change passwords; manage sessions; export your own learning data. |
 
-## Actual application screenshots
+Goals may remain blank, and saving changes requires confirmation. Lower reported subject levels break otherwise equal priority/device ties; they do not create a mastery score or inflate your estimates. Saved plans are snapshots: regenerate and confirm after changing tasks, availability or records.
 
-Captured from the current source using a disposable demonstration account. These are real interface screenshots with explicitly entered test tasks; they are not evidence that the same source has been deployed to the hosted website.
+## Real interface screenshots
+
+Captured from the Web interface with a disposable demonstration account and explicitly entered test tasks.
 
 <details>
-<summary>Overview and next scheduled step</summary>
+<summary>Overview: the next confirmed study session</summary>
 
-![StudyPilot overview showing the next confirmed learning session.](docs/screenshots/overview-desktop.jpg)
+![StudyPilot overview and next study session.](docs/screenshots/overview-desktop.jpg)
 
 </details>
 
 <details>
-<summary>Weekly preview and explicit confirmation</summary>
+<summary>Weekly plan: budget, bounded sessions and explicit confirmation</summary>
 
-![StudyPilot weekly preview showing budget totals, bounded sessions and an unchecked confirmation.](docs/screenshots/weekly-plan-desktop.jpg)
+![StudyPilot weekly preview and confirmation.](docs/screenshots/weekly-plan-desktop.jpg)
 
 </details>
 
-[Mobile screenshot](docs/screenshots/overview-mobile.jpg)
+## AI configuration and confirmation
 
-## What you can do
+Core learning management and rule-based scheduling work without a model key. To enable AI, configure at least one key **on the server**:
 
-### Define your learning direction
-
-Create a learning profile with your goals, an optional overall target deadline, subject levels, priorities, learning pace, preferences, and maximum session length. Set available minutes and devices for each day of the week. Existing profiles without a target deadline remain valid; an empty deadline keeps the previous task-deadline behavior.
-
-Goals belong to you. Leave them blank while you explore, revise them as priorities change, or clear them when they no longer fit. Profile changes take effect after you review and confirm saving.
-
-### Turn intentions into manageable tasks
-
-Each task can have a subject, priority, due date, estimated duration, completion status, notes, and a computer requirement. Edit tasks as your learning develops and keep track of what is still ahead.
-
-Task status and study time are separate. Completing a task does not invent a study record, and deleting a task keeps its existing actual study records available for progress tracking.
-
-### Build a week around your real constraints
-
-The scheduling engine uses explicit rules to create a weekly plan. It considers:
-
-- Your weekly time budget and daily available minutes.
-- Task due dates, task priorities, and subject priorities.
-- The earlier of each task's due date and the optional overall target deadline.
-- Available devices and tasks that require a computer.
-- Your maximum session length.
-- Time already studied and relevant work reserved in other saved weekly plans.
-
-Among otherwise equal priorities and device requirements, lower reported subject levels receive earlier allocation. Your own duration estimates remain authoritative: a reported level is not converted into an invented mastery score or extra study time. Actual time that fulfils another week's reservation is deducted once. Reservations beyond a changed deadline do not conceal remaining work.
-
-You receive a **preview before anything is saved**. The preview shows proposed sessions, used and remaining minutes, and work that could not be scheduled, including suggested adjustments. When time or device availability is insufficient, the plan explains the constraint rather than silently overbooking your week. Generating a new preview clears the previous confirmation. Discarding it leaves the saved plan intact.
-
-Planning works without a model API key. It produces day-level learning sessions based on time budgets; it does not generate a calendar of exact start and end times.
-
-### Track effort that actually happened
-
-Log a study date, actual minutes, and an optional note against a task. Review weekly totals, time by subject, study history, and task completion metrics.
-
-Estimates answer **how much work you expect**. Plans answer **where you intend to make time**. Study records answer **what you actually did**. Only actual records contribute to study-time statistics.
-
-### Discuss the next step in Chat
-
-Use the conversation workspace to ask questions about your learning data and discuss possible changes. Three modes focus the conversation:
-
-| Mode | Purpose | Change suggestions |
+| Provider | Fixed model | Environment variable |
 | --- | --- | --- |
-| General chat | Discuss learning, inspect tasks and records, and review progress. | Can propose supported changes through the available tools. |
-| Goal coach | Clarify goals, profile settings, and priorities. | Can propose profile changes; it does not create tasks or save plans. |
-| Plan builder | Review tasks and available time, then prepare a weekly plan. | Can propose supported task and plan changes; it does not rewrite profile goals. |
+| Zhipu, primary | `glm-4.7-flash` | `ZHIPU_API_KEY` |
+| SiliconFlow, fallback | `XingChenAGI/Xing4.0-29B` | `SILICONFLOW_API_KEY` |
 
-Selecting English or Simplified Chinese also sets the requested AI reply language. Switching the interface language preserves drafts and your original writing. Existing goals, notes, task titles, and older messages are not automatically translated.
+The adapter uses `/chat/completions` at fixed, allowlisted addresses. Eligible rate limits, timeouts, network failures and server errors may trigger the configured fallback. It never silently selects an unlisted paid model. Provider access, availability, pricing and commercial terms follow provider policies; a published app does not prove live model access.
 
-### Manage your account and data
+The workflow is **read → propose → review → explicitly confirm → validate and apply**. AI cannot directly execute protected changes or provide arbitrary schedules for storage. The server validates ownership, schemas, versions and confirmation; proposals expire after 30 minutes. Execution receipts prevent duplicate application. Generating a new plan preview clears the old confirmation; discarding it leaves the saved plan intact.
 
-Each account has its own learning profile, tasks, records, plans, and proposals. Account settings include:
+Questions, conversation context and relevant learning data are sent to the configured providers only after consent. Account credentials are excluded. Failed requests retain the question for retry in the open tab. Chat and drafts clear on refresh/sign-out.
 
-- Display name, avatar marker, and bio.
-- Password changes and recovery-code password resets.
-- Active-session review and signing out other sessions.
-- Export of your learning data without passwords, recovery codes, or session tokens.
+## Technology and data
 
-Recovery codes are displayed once when issued. Keep them private and save them somewhere accessible if you lose your password.
+- **Web:** FastAPI with native HTML, CSS and JavaScript; no React, Next.js or frontend build step.
+- **Hosted storage:** PostgreSQL with per-account learning schemas and persistent sessions, plans, proposals and quotas.
+- **Local storage:** SQLite account databases under the application's `data/accounts/` directory.
+- **Local Windows interface:** Streamlit, launched by `Start-StudyPilot.cmd`.
+- **Protection:** scrypt password hashes, recovery codes, HTTP-only cookies, same-origin/CSRF checks, input validation and versioned writes.
 
-## How AI changes stay under your control
+Web task/record forms use account-scoped `Idempotency-Key` receipts for retries; a write and its receipt commit or roll back together. Clients must reuse the same key for the same operation. A new action after refresh is not automatically treated as an old retry.
 
-AI collaborates in the conversation; it does not independently edit your saved learning data.
+Accounts on the same hosted instance can access their saved data after signing in from another browser. **Local installations and the hosted website have separate accounts and records, with no automatic synchronization.** Back up local account directories or use your PostgreSQL provider's backup facilities. Export excludes credentials; full-account import/restore is not currently available.
 
-| Step | What happens |
-| --- | --- |
-| **1. Read** | Allowlisted read-only tools inspect relevant data from the signed-in account. |
-| **2. Suggest** | A supported modification becomes a pending proposal with a reason and expected data version. |
-| **3. Review** | You inspect the proposed values or before-and-after differences on its card. |
-| **4. Confirm** | You explicitly select the confirmation checkbox and submit the proposal. |
-| **5. Apply** | The server rechecks ownership, validity, data versions, and confirmation, then records the result. |
+## Run the Web interface from source on Windows
 
-Saying "confirm" in chat does not execute a proposal. Proposals expire after 30 minutes, and stale or conflicting changes require a fresh review. Execution receipts prevent the same proposal from being applied repeatedly.
-
-AI cannot turn an estimate or a plan into actual study time. Saving a study session requires an explicit report of study that happened and user confirmation.
-
-Conversation messages are held in browser memory and clear on refresh or sign-out. Pending proposals and execution records persist with the account and follow their own validity rules.
-
-## Start with your first study week
-
-1. [Open StudyPilot](https://study-pilot-olive.vercel.app/), create an account, and save your recovery code privately.
-2. Review your learning profile. Choose a weekly budget, daily availability, devices, and session length, then confirm saving.
-3. Add a few tasks with due dates and realistic estimates.
-4. Generate a weekly preview, review unscheduled work, and confirm the plan you want to keep.
-5. Study, log the actual time, and use the progress view to decide what to do next.
-
-The current Web source guides first-time users through profile, task and plan confirmation, then shows the next saved-plan session in Overview. It uses existing account data rather than inserting example goals, tasks or actual minutes. Saved plans remain snapshots; after changing tasks, time, devices or records, generate and confirm a fresh preview.
-
-Choose English or Chinese in the website's language selector. On your first visit, StudyPilot follows your browser language. Manual language and theme choices are remembered in that browser.
-
-## Choose where your data lives
-
-| Option | Interface | Storage | Use case |
-| --- | --- | --- | --- |
-| Hosted website | English and Simplified Chinese Web app | PostgreSQL | Start in a browser without setting up a server. |
-| Self-hosted Web app | English and Simplified Chinese | PostgreSQL | Operate your own deployed instance. |
-| Local Web app | English and Simplified Chinese | SQLite | Run the Web experience on your own computer. |
-| Local Streamlit app | Simplified Chinese | SQLite | Use the separate local Python interface. |
-
-Accounts and data are separate across deployments. Local records are not automatically uploaded or synchronized with the hosted website. Account export provides a copy of your learning data; a one-click full-account restore is not currently part of the Web interface.
-
-## Run the Web app locally
-
-Use **Python 3.12 or a compatible later version**. From a checkout of this repository, run in PowerShell:
+Use Python 3.12+ and PowerShell. From a checkout or extracted source archive:
 
 ```powershell
 cd python-ai-agent-ai-agent-studypilot/outputs/StudyPilot
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-$env:STUDYPILOT_WEB_LOCAL = "1"
+$env:STUDYPILOT_WEB_LOCAL = '1'
 .\.venv\Scripts\python.exe -m uvicorn studypilot.web:app --host 127.0.0.1 --port 8510
 ```
 
-Open [the local Web app](http://127.0.0.1:8510/). Explicit local mode uses SQLite, and saved data survives a server restart. Account data defaults to `data/accounts/` inside the application directory. Back up that directory when retaining a local installation.
+Open **[http://127.0.0.1:8510/](http://127.0.0.1:8510/)** for the English/Chinese Web interface with local SQLite. The Windows download's normal launcher opens the separate Chinese Streamlit interface on port 8501.
 
-For the separate Streamlit interface, install `requirements-local.txt` and run `start_studypilot.py`, or use the application's `Start-StudyPilot.cmd` launcher. Its interface remains Simplified Chinese.
+### Environment variables
 
-## Deploy your own Web instance
+StudyPilot does not automatically load `.env` files. Set variables in the process or hosting platform; [.env.example](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/.env.example) contains names only.
 
-The deployed Web app uses **FastAPI, native HTML/CSS/JavaScript, and PostgreSQL**. It does not require a React, Vite, or Next.js build.
-
-| Setting | Value |
+| Variable | Requirement |
 | --- | --- |
-| Vercel Root Directory | `python-ai-agent-ai-agent-studypilot/outputs/StudyPilot` |
-| Application entry point | `studypilot.web:app`, configured in `pyproject.toml` |
-| Runtime dependencies | `requirements.txt` |
-| Persistent production database | `DATABASE_URL`, with `POSTGRES_URL` supported as an alternative |
+| `DATABASE_URL` or `POSTGRES_URL` | Required for deployed Web PostgreSQL storage. |
+| `STUDYPILOT_WEB_LOCAL=1` | Required for explicit local Web SQLite mode; disabled on Vercel. |
+| `STUDYPILOT_AUTH_DIR` | Optional local account-directory override. |
+| `ZHIPU_API_KEY`, `SILICONFLOW_API_KEY` | Optional; at least one is needed for AI calls. |
+| `STUDYPILOT_AI_ENABLED` | Optional; set to `0` to pause model calls. |
+| `STUDYPILOT_AI_USER_LIMIT` | Optional; default 15 requests per account per window. |
+| `STUDYPILOT_AI_WINDOW_SECONDS` | Optional; default 600 seconds. |
+| `STUDYPILOT_AI_SITE_LIMIT` | Optional; default 400 requests per UTC day, persisted server-side. |
 
-Production does not fall back to temporary SQLite. The [deployment guide](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/DEPLOYMENT.md) covers database connections, environment isolation, and deployment checks. It is currently written in Chinese; the [English application guide](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/README.md) covers local setup and configuration.
+Never commit API keys, connection strings, account data or runtime folders.
 
-## Optional AI configuration
+## Deployment and source layout
 
-Profiles, tasks, scheduling, and records work without AI. To enable Chat, configure at least one provider key in the **server's environment**:
+Vercel Root Directory: **`python-ai-agent-ai-agent-studypilot/outputs/StudyPilot`**. The entry point is **`studypilot.web:app`**, configured in `pyproject.toml`; dependencies are in `requirements.txt`. Production requires PostgreSQL and does not fall back to temporary SQLite. Use separate production and test databases. See the [deployment guide (Chinese)](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/DEPLOYMENT.md).
 
-| Variable | Purpose |
+Within the application directory:
+
+| Path | Responsibility |
 | --- | --- |
-| `ZHIPU_API_KEY` | Primary Zhipu provider, using the configured `glm-4.7-flash` model. |
-| `SILICONFLOW_API_KEY` | Backup SiliconFlow provider, using the configured `XingChenAGI/Xing4.0-29B` model. |
-| `STUDYPILOT_AI_ENABLED` | Set to `0` to pause model calls. |
-| `STUDYPILOT_AI_USER_LIMIT` | Per-account allowance; default 15 requests per window. |
-| `STUDYPILOT_AI_WINDOW_SECONDS` | Per-account quota window; default 600 seconds. |
-| `STUDYPILOT_AI_SITE_LIMIT` | Site-wide allowance; default 400 requests per UTC day. |
+| `public/` | Web UI, language catalogues, theme and navigation motion. |
+| `studypilot/web.py`, `auth.py` | HTTP routes, account/session checks and confirmation boundaries. |
+| `models.py`, `scheduler.py`, `progress.py` under `studypilot/` | Validated inputs, constrained planning and actual-study statistics. |
+| `database.py`, `postgres.py` under `studypilot/` | Local/hosted persistence, transactions and retry receipts. |
+| `ai.py`, `agent.py`, `agent_tools.py`, `proposals.py` under `studypilot/` | Fixed providers, bounded tool loop, read tools and reviewed changes. |
+| `tests/` | Functional, UI, model-mock and optional PostgreSQL integration tests. |
+| `app.py` | Separate local Streamlit interface. |
 
-The application does not automatically load `.env` files. The [environment example](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/.env.example) documents variable names; configure values in your process or hosting platform rather than committing credentials.
-
-Provider addresses and model names are fixed on the server. Eligible rate limits, timeouts, connection failures, and server errors can trigger the backup provider. The adapter does not silently substitute an unlisted paid model. Actual availability, access, and pricing follow provider policies.
-
-Request limits and site quotas are persisted on the server rather than reset on a cold start. Responses and tool arguments are validated, and the tool loop has bounded rounds, calls, and execution time. Replies arrive as complete validated responses rather than partial streaming output.
-
-Failed requests retain the current question in the open browser tab so it can be edited and sent again. Automatic model fallback does not execute a proposal. A refresh or sign-out still clears browser-only drafts and chat.
-
-## Privacy and application safeguards
-
-Before a chat request, the user must consent to sending the question, conversation context, and relevant learning data to the listed model providers. Account credentials are excluded from that context.
-
-The implementation includes account isolation, server-side authorization, same-origin and CSRF checks for changes, salted scrypt password hashes, and HTTP-only session cookies. Secure cookies are enabled on Vercel. Model keys are read on the server; model-call logs record operational metadata rather than prompts, learning content, or keys.
-
-AI output can be incorrect. Ownership checks, input validation, version checks, and explicit confirmation remain part of the save path regardless of the model's suggestions.
-
-The current Web task and study-record forms reuse an account-scoped `Idempotency-Key` after an uncertain response. A successful write and its receipt commit together; reusing the key for different content returns a conflict. This covers retries within the current browser session, not a deliberately new action after refresh. The receipt table is added without replacing existing tables, and the optional deadline is stored in the existing profile JSON. Back up persistent data before deploying an update; export alone does not provide full-account restore.
-
-## Project structure
-
-Application sources live in `python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/`:
-
-| Location | Responsibility |
-| --- | --- |
-| `public/` | Web interface, styles, navigation motion, and UI translations. |
-| `studypilot/web.py` | HTTP routes, authentication, and confirmation boundaries. |
-| `studypilot/models.py` | Data models and shared validation. |
-| `studypilot/database.py`, `studypilot/postgres.py` | Local and production persistence. |
-| `studypilot/scheduler.py`, `studypilot/progress.py` | Weekly planning and actual-study statistics. |
-| `studypilot/ai.py`, `studypilot/agent.py` | Provider adapter and bounded model/tool loop. |
-| `studypilot/proposals.py` | Pending changes and confirmed execution. |
-| `studypilot/i18n.py` | Localized Web error messages. |
-| `tests/` | Isolated functional and integration tests. |
-| `app.py` | Separate Chinese Streamlit interface. |
-| `pyproject.toml` | Python metadata and Vercel entry point. |
-
-## Verification and development
+## Tests and release verification
 
 From the application directory:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
-node tests/test_workflow.cjs
+.\.venv\Scripts\python.exe -m compileall -q studypilot app.py
 ```
 
-Tests cover account isolation, validation, confirmation, concurrent changes, persistent records, scheduling, quotas, localized HTTP behavior, and model failure handling. Model scenarios use mocked responses, so the automated suite does not consume live model requests. PostgreSQL integration tests require an explicitly configured independent test database; otherwise they are reported as skipped.
+Optional browser-helper checks require Node.js 22+:
 
-Node.js 22+ is needed only for the optional browser-helper checks; the application itself does not need Node or a frontend build. JavaScript files can be checked with `node --check public/study.js` (and the other scripts). Python syntax can be checked with `python -m compileall -q studypilot app.py`. The repository CI runs these checks and the Python suite; no separate type-checker or bundler is configured. Clean-environment installation and test evidence are recorded in the Phase 1 report, not assumed from earlier runs.
+```powershell
+node tests/test_workflow.cjs
+node --check public/study.js
+```
 
-When extending StudyPilot, keep user text separate from interface translations, preserve canonical stored values, and route proposed business changes through the existing server confirmation and validation path.
+Models are mocked in automated tests. PostgreSQL cases run only when `STUDYPILOT_TEST_POSTGRES` points at an independent localhost test database; otherwise they skip. CI runs Python tests/compilation and JavaScript checks. There is no configured bundler or separate type-check command. [Audit](docs/PHASE0_AUDIT.md) · [Phase 1 report](docs/PHASE1_REPORT.md) · [This release's validation](docs/RELEASE_PREVIEW_2.md).
 
-## Documentation
+Maintainers can build the Windows source ZIP from a committed revision using `python scripts/build_windows_release.py --ref HEAD --output verification/StudyPilot-Windows.zip`. The builder packages tracked source and a startup guide, excluding local data and runtime files.
 
-- [Code audit](docs/PHASE0_AUDIT.md)
-- [Phase 1 changes, validation and remaining work](docs/PHASE1_REPORT.md)
-- [English application guide](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/README.md)
-- [Deployment guide - Chinese](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/DEPLOYMENT.md)
-- [AI integration details - Chinese](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/FREE_AI_ENGINE.md)
-- [Environment variable example](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/.env.example)
-- [Automated test sources](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/tests/)
+## Known limits and roadmap
 
-## Contributing and roadmap
+- This is a preview. The local distribution is **Windows only**, requires Python, and has no standalone EXE installer.
+- Plans have day-level sessions, not exact calendar start/end times. They do not automatically rebuild after a missed day or changed inputs.
+- Actual study time is not proof of mastery. Tasks currently have three statuses and notes, without structured partial completion or plan undo.
+- Changing language does not translate existing user writing. Chat/drafts do not survive refresh; local and hosted installations do not synchronize.
+- **Next:** clearer task actions/completion criteria and reviewed rescheduling. **Later:** simple knowledge checks and review rules. These roadmap items are not implemented features.
 
-Contributions should include a reproducible issue or a focused pull request, tests for changed business rules, and documentation for changed behavior. Use disposable accounts and mocked model responses; never submit credentials or private learning data. Phase 2 focuses on clearer task execution and rescheduling; Phase 3 will evaluate simple knowledge checks and review rules after those foundations are stable.
+## Contributing and license
 
-## License
+Open a focused [issue](https://github.com/aerixx0/Study_Pilot/issues) or pull request with reproduction steps and tests for changed business behavior. Use disposable accounts and mocked models. Include no private learning data or credentials.
 
-StudyPilot's project code uses the [MIT License](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/LICENSE). Third-party models and hosting services follow their own terms and policies.
+The project code uses the [MIT License](python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/LICENSE). Third-party models and services have their own terms.

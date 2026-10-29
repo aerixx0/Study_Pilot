@@ -16,10 +16,8 @@ if errorlevel 1 (
     py -3 -m venv .venv
 )
 if errorlevel 1 goto failed
-"%STUDYPILOT_PYTHON%" -m pip install -r requirements-local.txt
-if errorlevel 1 goto failed
 :run
-"%STUDYPILOT_PYTHON%" -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
+"%STUDYPILOT_PYTHON%" -c "import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)"
 if errorlevel 1 goto failed
 "%STUDYPILOT_PYTHON%" -c "import streamlit" >nul 2>nul
 if not errorlevel 1 goto launch
@@ -30,6 +28,6 @@ if errorlevel 1 goto failed
 if errorlevel 1 goto failed
 exit /b 0
 :failed
-echo Could not start StudyPilot. Install Python 3.11+ and check the messages above.
+echo Could not start StudyPilot. Install Python 3.12+ and check the messages above.
 pause
 exit /b 1

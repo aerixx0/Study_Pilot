@@ -1,5 +1,7 @@
 # How to Open StudyPilot
 
+**Current local platform: Windows only.** No macOS or Linux local package is available. The website remains available in a browser.
+
 ## Option 1: Open the website
 
 **Website: [https://study-pilot-olive.vercel.app/](https://study-pilot-olive.vercel.app/)**
@@ -8,7 +10,15 @@ No download or Python installation is required. Open the link in your browser an
 
 ## Option 2: Download and run on Windows
 
-**[Download StudyPilot for Windows (.zip)](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.1/StudyPilot-Windows-v0.6.0-preview.1.zip)**
+**[Download StudyPilot for Windows (.zip)](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.2/StudyPilot-Windows-v0.6.0-preview.2.zip)**
+
+### One-command PowerShell download
+
+Copy this command into Windows PowerShell. It downloads the ZIP to your Desktop:
+
+```powershell
+$studyPilotZip = Join-Path ([Environment]::GetFolderPath('Desktop')) 'StudyPilot-Windows-v0.6.0-preview.2.zip'; Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.2/StudyPilot-Windows-v0.6.0-preview.2.zip' -OutFile $studyPilotZip
+```
 
 This ZIP contains the application source and a startup script. It is not a standalone `.exe` installer. The local Streamlit interface is currently Chinese; use the website for English.
 
@@ -41,7 +51,7 @@ Press **Ctrl+C** in the startup window to stop the service. To use it again, dou
 - **The browser cannot open the local address:** Wait for installation and startup to finish. Keep the startup window open and check it for errors.
 - **Port 8501 is already in use:** Close an earlier StudyPilot startup window and retry. Do not stop unrelated applications.
 
-The automatically generated **Source code (zip)** and **Source code (tar.gz)** links on GitHub are general repository archives. For the Windows steps above, use the named **`StudyPilot-Windows-v0.6.0-preview.1.zip`** download.
+The automatically generated **Source code (zip)** and **Source code (tar.gz)** links on GitHub are general repository archives. For the Windows steps above, use the named **`StudyPilot-Windows-v0.6.0-preview.2.zip`** download.
 
 ## Your data
 
@@ -49,4 +59,4 @@ The website and local application have separate accounts and study records, with
 
 Local accounts and study records are stored under `python-ai-agent-ai-agent-studypilot/outputs/StudyPilot/data`. Include that folder in backups. Do not replace it when updating application files. If you move the application folder, recreate its `.venv` virtual environment in the new location.
 
-Core goals, tasks, planning, and records work without AI. Model requests require server-side `ZHIPU_API_KEY` and/or `SILICONFLOW_API_KEY` environment variables. See the [AI configuration guide](README.md#optional-ai-configuration). Keep API keys, recovery codes, database connection strings, and local data private.
+Core goals, tasks, planning, and records work without AI. Model requests require server-side `ZHIPU_API_KEY` and/or `SILICONFLOW_API_KEY` environment variables. See the [AI configuration guide](README.md#ai-configuration-and-confirmation). Keep API keys, recovery codes, database connection strings, and local data private.

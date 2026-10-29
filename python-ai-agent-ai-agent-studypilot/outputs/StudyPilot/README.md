@@ -18,7 +18,9 @@ The current Web source includes a first-use checklist and shows the next confirm
 
 New previews always start unconfirmed. Discarding one leaves the saved plan unchanged. Web task/record creation uses persistent, account-scoped retry receipts; business writes and receipts commit together. Third-party API clients must reuse `Idempotency-Key` to receive this protection.
 
-See the [audit](../../../docs/PHASE0_AUDIT.md) and [Phase 1 report](../../../docs/PHASE1_REPORT.md) for tests, deployment status and remaining limitations. The Windows ZIP remains a frozen preview, distinct from current source and the hosted deployment.
+The local distribution currently supports **Windows only**, with Python 3.12+. [Download and PowerShell instructions](../../../Usage.md) cover the Windows source ZIP and launcher. The website needs no local installation. The separate local Streamlit interface is Chinese, while the Web interface supports English and Chinese.
+
+See the [audit](../../../docs/PHASE0_AUDIT.md), [Phase 1 report](../../../docs/PHASE1_REPORT.md) and [Preview 2 validation](../../../docs/RELEASE_PREVIEW_2.md) for implementation details and checks. Each downloadable release is a fixed source snapshot; it does not update your local copy automatically.
 
 Switching language keeps form drafts and preserves your own writing. Existing goals, task titles, notes, and conversations stay in their original language. AI is instructed to reply in your selected language; previously generated replies are not rewritten.
 

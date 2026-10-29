@@ -7,13 +7,27 @@ permissions:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: studypilot_test
+          POSTGRES_PASSWORD: studypilot_ci_only
+          POSTGRES_DB: studypilot_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U studypilot_test -d studypilot_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: python-ai-agent-ai-agent-studypilot/outputs/StudyPilot
     env:
       ZHIPU_API_KEY: ""
       SILICONFLOW_API_KEY: ""
-      STUDYPILOT_TEST_POSTGRES: ""
+      STUDYPILOT_TEST_POSTGRES: "postgresql://studypilot_test:studypilot_ci_only@127.0.0.1:5432/studypilot_test"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

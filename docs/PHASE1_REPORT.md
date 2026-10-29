@@ -94,3 +94,7 @@ Retained the clear website/Windows entry points. Added actual screenshots, an im
 ## 6. Next phase
 
 First validate the additive changes against an isolated PostgreSQL instance and complete CI. Then prioritize explicit task actions/completion criteria using existing notes where possible, missed-day rescheduling with preview/confirmation, and mobile task/record interactions. Evaluate partial-completion storage and safe restore only with a concrete compatibility plan. Quizzes and review rules remain Phase 3.
+
+## Release follow-up: October 29, 2026
+
+The original results above describe the phase's initial handoff. Before the user-authorized release, an independent local PostgreSQL 17.11 instance was provisioned and the full suite passed: **184 tests, zero skipped**, including all **17 PostgreSQL integration cases**. The isolated server was then stopped. CI now includes its own ephemeral PostgreSQL 17 service. See [Preview 2 validation](RELEASE_PREVIEW_2.md) and the linked release notes for the current publication checks; the initial skipped tests are no longer an outstanding release gate.
