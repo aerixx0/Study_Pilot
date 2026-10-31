@@ -25,8 +25,8 @@ Application paths are relative to `python-ai-agent-ai-agent-studypilot/outputs/S
 | `public/study.js`, `workflow.js`, `i18n.js`, `index.html`, `study.css`, `studypilot/i18n.py` | Guided steps, next action, draft/retry lifecycle, confirmation reset, discard, localized errors and small responsive styles. Existing motion/theme code is retained. |
 | `app.py`, `studypilot/schedule_ui.py` | Local-interface deadline input and adjustment hints. |
 | `tests/test_plan_reliability.py`, `test_web.py`, `test_scheduler.py`, `test_i18n.py`, `test_workflow.cjs` | Constraint, compatibility, duplicate request, concurrency, rollback, localization and browser-helper regression coverage. |
-| `.env.example`, application `README.md` / `README.en.md` | Actual variables, local setup, current functionality and validation instructions. |
-| Root `README.md` / `README.en.md`, `docs/PHASE0_AUDIT.md`, this report, `docs/screenshots/` | Source/release distinction, real UI captures, implementation status, audit evidence and remaining work. |
+| `.env.example`, application `README.md` | Actual variables, local setup, current functionality and validation instructions. |
+| Root `README.md`, `docs/PHASE0_AUDIT.md`, this report, `docs/screenshots/` | Source/release distinction, real UI captures, implementation status, audit evidence and remaining work. |
 | Root `.github/workflows/tests.yml` | Python tests/syntax and JavaScript syntax/helper checks. PostgreSQL tests remain explicitly conditional. |
 
 The pre-existing untracked `Configure-AI.cmd` and `configure_ai.py` are preserved and excluded. Temporary environments, demo accounts, databases, logs and offline model fixtures remain under ignored `verification/`.
