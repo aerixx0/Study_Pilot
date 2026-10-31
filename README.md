@@ -78,13 +78,20 @@ Core learning management and rule-based scheduling work without a model key. To 
 | Provider | Fixed model | Environment variable |
 | --- | --- | --- |
 | Zhipu, primary | `glm-4.7-flash` | `ZHIPU_API_KEY` |
-| SiliconFlow, fallback | `XingChenAGI/Xing4.0-29B` | `SILICONFLOW_API_KEY` |
+| Cloudflare Workers AI, preferred fallback | `@cf/zai-org/glm-4.7-flash` | `CLOUDFLARE_ACCOUNT_ID` **and** `CLOUDFLARE_API_TOKEN` |
+| SiliconFlow, legacy fallback | `XingChenAGI/Xing4.0-29B` | `SILICONFLOW_API_KEY` |
 
 The adapter uses `/chat/completions` at fixed, allowlisted addresses. Eligible rate limits, timeouts, network failures and server errors may trigger the configured fallback. It never silently selects an unlisted paid model. Provider access, availability, pricing and commercial terms follow provider policies; a published app does not prove live model access.
+
+Each conversation selects **at most the first two fully configured providers** in the order above, including all tool rounds. Missing Cloudflare credentials leave the existing Zhipu/SiliconFlow route intact. Cloudflare runs its own hosted model; it does not call the Zhipu API. Keep Cloudflare on **Workers Free**: its current allocation is 10,000 Neurons/day, with calls stopped at the limit. A Workers Paid account can incur overage charges for the same model. StudyPilot cannot enforce your external account's billing plan. [Cloudflare setup and troubleshooting](docs/CLOUDFLARE_AI.md).
+
+The developer-only maintenance screen shows configuration status and links to Cloudflare and Vercel settings. It never returns token values. Configuration status means credentials are present, not that a live model request has succeeded.
 
 The workflow is **read → propose → review → explicitly confirm → validate and apply**. AI cannot directly execute protected changes or provide arbitrary schedules for storage. The server validates ownership, schemas, versions and confirmation; proposals expire after 30 minutes. Execution receipts prevent duplicate application. Generating a new plan preview clears the old confirmation; discarding it leaves the saved plan intact.
 
 Questions, conversation context and relevant learning data are sent to the configured providers only after consent. Account credentials are excluded. Failed requests retain the question for retry in the open tab. Chat and drafts clear on refresh/sign-out.
+
+Cloudflare is an overseas service. Its [Workers AI data policy](https://developers.cloudflare.com/workers-ai/platform/data-usage/) states that customer content is not used for model training; standard inference retention has limited exceptions, and enabled logging or stateful features may retain content. Include this provider in your own privacy disclosures before serving users.
 
 ## Technology and data
 
@@ -122,6 +129,7 @@ StudyPilot does not automatically load `.env` files. Set variables in the proces
 | `STUDYPILOT_WEB_LOCAL=1` | Required for explicit local Web SQLite mode; disabled on Vercel. |
 | `STUDYPILOT_AUTH_DIR` | Optional local account-directory override. |
 | `ZHIPU_API_KEY`, `SILICONFLOW_API_KEY` | Optional; at least one is needed for AI calls. |
+| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Optional pair enabling Cloudflare Workers AI; an alternative to the keys above. |
 | `STUDYPILOT_AI_ENABLED` | Optional; set to `0` to pause model calls. |
 | `STUDYPILOT_AI_USER_LIMIT` | Optional; default 15 requests per account per window. |
 | `STUDYPILOT_AI_WINDOW_SECONDS` | Optional; default 600 seconds. |

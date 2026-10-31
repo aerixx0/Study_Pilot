@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from .agent import AIError, MODE_LABELS, MODES, run_agent
-from .ai import DEFAULT_MODEL, ai_configured
+from .ai import DEFAULT_MODEL, ai_configured, configured_providers, provider_status
 from .auth import AVATARS, AuthError
 from .database import ConfirmationRequired, ConflictError
 from .models import DAYS, DEVICES, LEVELS, PRIORITIES, SPEEDS, STATUSES, SUBJECTS, StudyProfile, TaskInput, ValidationError, iso_date
@@ -206,8 +206,12 @@ def create_app(auth_factory=None):
         return auth, token, account
 
     def identity(auth, token, account):
+        providers = configured_providers()
         return dict(account=asdict(account), personal=auth.get_personal_profile(token), csrf=csrf(token),
-                    ai_configured=ai_configured(), default_model=DEFAULT_MODEL,
+                    ai_configured=ai_configured(),
+                    ai_providers=[p.label for p in providers],
+                    ai_setup=provider_status() if account.role == "developer" else None,
+                    default_model=providers[0].model if providers else DEFAULT_MODEL,
                     modes=dict(values=list(MODES), labels=MODE_LABELS),
                     today=date.today().isoformat(),
                     options=dict(subjects=SUBJECTS, levels=LEVELS, speeds=SPEEDS, statuses=STATUSES,

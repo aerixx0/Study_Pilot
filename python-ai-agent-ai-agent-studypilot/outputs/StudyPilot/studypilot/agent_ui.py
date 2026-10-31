@@ -6,7 +6,7 @@ import time
 import streamlit as st
 
 from .agent import AIError, MODE_LABELS, MODES, run_agent
-from .ai import BACKUP, PRIMARY, ai_configured
+from .ai import ai_configured, configured_providers
 from .database import ConfirmationRequired, ConflictError
 from .models import ValidationError
 from .quota import QuotaExceeded
@@ -115,11 +115,11 @@ def agent_page(auth, account):
         st.info(f"AI 助手暂未开放。你仍可管理学习档案、任务、计划，并处理已有建议。")
         if account.role == "developer":
             with st.expander("本机配置说明"):
-                st.write(f"在启动 StudyPilot 的同一终端设置 {PRIMARY.key_env}（主模型）和/或 {BACKUP.key_env}（备用模型），然后重启服务。"
+                st.write("在启动 StudyPilot 的同一终端设置 ZHIPU_API_KEY，或 CLOUDFLARE_API_TOKEN 与 CLOUDFLARE_ACCOUNT_ID，或 SILICONFLOW_API_KEY，然后重启服务。"
                          "不要把 Key 发到聊天中或写进源码。")
-                st.caption(f"主模型：{PRIMARY.label}；备用模型：{BACKUP.label}。只使用这两家免费模型，不会自动改用收费服务。")
+                st.caption("优先智谱，其次 Cloudflare，最后硅基流动；每次对话最多使用已配置的前两家，不会自动改用收费模型。Cloudflare 请保持 Workers Free 套餐。")
     else:
-        st.caption(f"AI 助手由智谱或硅基流动提供模型服务。"
+        st.caption(f"本次可用模型服务：{'、'.join(p.label for p in configured_providers())}。"
                    f"经你同意，本次问题、对话上下文及相关学习资料将发送至模型服务商，不包含账号凭据。AI 建议可能有误，请核对后使用。")
     mode = st.selectbox("对话模式", MODES, index=0, key="agent_mode",
                         format_func=lambda value: MODE_LABELS[value])

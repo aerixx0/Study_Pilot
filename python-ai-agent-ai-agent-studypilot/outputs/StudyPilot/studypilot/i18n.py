@@ -17,6 +17,7 @@ def request_language(request):
 
 MESSAGES = {
     "AI 服务暂时不可用，请稍后重试；已有建议仍需你核对确认。": "AI services are temporarily unavailable. Try again later; existing suggestions still need your confirmation.",
+    "Cloudflare 账号 ID 未配置或格式无效，请联系维护人员。": "The Cloudflare account ID is missing or invalid. Please contact the maintainer.",
     "重试标识无效，请刷新后重新提交。": "This retry identifier is invalid. Refresh the page and submit again.",
     "此重试标识已用于不同内容，请重新提交。": "This retry identifier was already used for different content. Submit a new operation.",
     "所选日期超出可支持的计划范围。": "This date is outside the supported planning range. Choose a different date.",
@@ -117,6 +118,7 @@ def error_text(message, language):
         categories = {"限流": "rate limit", "超时": "timeout", "连接失败": "connection failure",
                       "模型繁忙": "model busy", "账号额度或余额受限": "account quota or balance restriction",
                       "账号权限或套餐受限": "account access restriction",
+                      "今日免费额度已用完": "daily free allowance exhausted",
                       "服务异常": "service error", "服务错误": "service error", "服务端错误": "service error",
                       "认证失败": "service configuration", "响应格式": "invalid response"}
         kinds = list(dict.fromkeys(label for key, label in categories.items() if key in message))

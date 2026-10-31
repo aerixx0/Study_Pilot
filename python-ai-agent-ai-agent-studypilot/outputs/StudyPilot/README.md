@@ -42,7 +42,9 @@ For Vercel, follow [deployment instructions](DEPLOYMENT.md). Production uses Pos
 
 ## AI and privacy
 
-Provider keys are read only from server environment variables: `ZHIPU_API_KEY` and `SILICONFLOW_API_KEY`. See [.env.example](.env.example). Never put keys in browser code or Git. Existing provider restrictions, persistent quotas, authentication, and confirmation checks apply equally to both languages.
+Provider credentials are read only from server environment variables: `ZHIPU_API_KEY`, the pair `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN`, and `SILICONFLOW_API_KEY`. The first two fully configured providers in that order are eligible for each conversation; tool rounds never reach a third provider. See [.env.example](.env.example) and the [Cloudflare setup guide](../../../docs/CLOUDFLARE_AI.md). Never put keys in browser code or Git. Existing provider restrictions, persistent quotas, authentication, and confirmation checks apply equally to both languages.
+
+Cloudflare uses the fixed `@cf/zai-org/glm-4.7-flash` model. Keep the account on Workers Free so requests stop after the daily free allocation; a paid account can incur overage charges. Developer maintenance shows only configuration booleans, not credentials or a guarantee of live availability. Public chat disclosures list the configured providers, which may include overseas services.
 
 Before a chat request, you must consent to sending the question, conversation context, and relevant learning data to the listed model providers. Account credentials are excluded. AI suggestions may be wrong; no change is applied merely because you say “confirm” in chat.
 

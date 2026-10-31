@@ -263,7 +263,7 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(list_proposals(self.auth, self.token)[0]["state"], "pending")
 
     def test_no_key_and_bad_mode_are_explicit(self):
-        with patch.dict(os.environ, {"ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": ""}):
+        with patch.dict(os.environ, {"ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": "", "CLOUDFLARE_API_TOKEN": "", "CLOUDFLARE_ACCOUNT_ID": ""}):
             with self.assertRaisesRegex(AIError, "未配置"):
                 run_agent(self.auth, self.token, "查询")
         with self.assertRaises(ValidationError):
@@ -315,7 +315,7 @@ class AgentUITests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         env = patch.dict(os.environ, {"STUDYPILOT_AUTH_DIR": str(Path(self.temp.name)/'accounts'),
-            "STUDYPILOT_DB": str(Path(self.temp.name)/'legacy.db'), "ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": ""})
+            "STUDYPILOT_DB": str(Path(self.temp.name)/'legacy.db'), "ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": "", "CLOUDFLARE_API_TOKEN": "", "CLOUDFLARE_ACCOUNT_ID": ""})
         env.start(); self.addCleanup(env.stop)
         self.auth = AuthStore(Path(self.temp.name)/'accounts')
         self.auth.register("learner", PASSWORD, confirmed=True)

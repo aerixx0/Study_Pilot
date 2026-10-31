@@ -1,7 +1,7 @@
-"""服务器端免费模型适配器：主用智谱 GLM-4.7-Flash，备用硅基流动 Xing4.0-29B。
+"""服务器端免费模型适配器：智谱、Cloudflare Workers AI、硅基流动。
 
 整个程序只有这一处知道服务地址和模型名：浏览器、对话内容和模型输出都不能指定
-Base URL、模型或服务商，因此不会因为配置漂移而切到收费模型。两家接口都是
+Base URL、模型或服务商，因此不会因为配置漂移而切到收费模型。接口都是
 OpenAI 兼容的 /chat/completions，这里把内部使用的 Responses 形状
 （instructions/input/tools → output）与对话形状互相转换，调用方不需要改动。
 
@@ -15,6 +15,7 @@ import logging
 import math
 import os
 import random
+import re
 import socket
 import time
 from email.utils import parsedate_to_datetime
@@ -56,7 +57,11 @@ PRIMARY = Provider("zhipu", "智谱 GLM-4.7-Flash", "https://open.bigmodel.cn/ap
                    "glm-4.7-flash", "ZHIPU_API_KEY")
 BACKUP = Provider("siliconflow", "硅基流动 Xing4.0-29B", "https://api.siliconflow.cn/v1",
                   "XingChenAGI/Xing4.0-29B", "SILICONFLOW_API_KEY")
-PROVIDERS = (PRIMARY, BACKUP)
+CLOUDFLARE = Provider("cloudflare", "Cloudflare GLM-4.7-Flash",
+                      "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
+                      "@cf/zai-org/glm-4.7-flash", "CLOUDFLARE_API_TOKEN")
+PROVIDERS = (PRIMARY, CLOUDFLARE, BACKUP)
+MAX_PROVIDERS = 2
 DEFAULT_MODEL = PRIMARY.model
 
 KIND_TEXT = {
@@ -65,6 +70,7 @@ KIND_TEXT = {
     "empty": "空的响应", "oversize": "响应过大",
     "overloaded": "模型繁忙", "account_limit": "账号额度或余额受限",
     "access": "账号权限或套餐受限",
+    "free_quota": "今日免费额度已用完",
 }
 
 # Only allowlisted business codes may appear in logs; never retain upstream text.
@@ -75,6 +81,8 @@ ZHIPU_ERRORS = {
     "1314": "access", "1315": "access",
     **{str(code): "account_limit" for code in range(1316, 1322)},
 }
+CLOUDFLARE_ERRORS = {"3036": "free_quota", "3040": "overloaded", "5035": "access"}
+SAFE_CODES = ZHIPU_ERRORS.keys() | CLOUDFLARE_ERRORS.keys()
 
 
 class ProviderFailure(Exception):
@@ -84,7 +92,7 @@ class ProviderFailure(Exception):
         super().__init__(message)
         self.kind = kind
         self.status = status
-        self.code = code if code in ZHIPU_ERRORS else None
+        self.code = code if code in SAFE_CODES else None
         self.retry_after = retry_after
 
 
@@ -107,13 +115,38 @@ def upstream_failure(provider, data, status=None, retry_after=None):
     kind = kind_for_status(status) if status is not None else "request"
     if provider == PRIMARY and status in (None, 429):
         kind = ZHIPU_ERRORS.get(code, "rate_limit" if code == "429" else kind)
+    elif provider == CLOUDFLARE:
+        errors = data.get("errors") if isinstance(data, dict) else None
+        first = errors[0] if isinstance(errors, list) and errors else error
+        code = str(first.get("code")) if isinstance(first, dict) else None
+        expected_status = {"3036": 429, "3040": 429, "5035": 403}.get(code)
+        if code in CLOUDFLARE_ERRORS and status in (None, expected_status):
+            kind = CLOUDFLARE_ERRORS[code]
+        else:
+            code = None
     else:
         code = None
     return ProviderFailure(kind, "模型服务返回错误。", status=status,
-                           code=code if provider == PRIMARY else None, retry_after=retry_after)
+                           code=code if provider in (PRIMARY, CLOUDFLARE) else None, retry_after=retry_after)
+
+
+def cloudflare_account_id():
+    value = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+    return value if re.fullmatch(r"[a-fA-F0-9]{32}", value) else ""
+
+
+def provider_url(provider):
+    if provider == CLOUDFLARE:
+        account_id = cloudflare_account_id()
+        if not account_id:
+            raise AIError("Cloudflare 账号 ID 未配置或格式无效，请联系维护人员。")
+        return provider.base_url.format(account_id=account_id) + CHAT_PATH
+    return provider.base_url + CHAT_PATH
 
 
 def provider_key(provider, keys=None):
+    if provider == CLOUDFLARE and not cloudflare_account_id():
+        return ""
     value = (keys or {}).get(provider.name) if keys else None
     if value is None:
         value = os.getenv(provider.key_env, "")
@@ -126,7 +159,16 @@ def ai_configured(keys=None):
 
 
 def configured_providers(keys=None):
-    return tuple(provider for provider in PROVIDERS if provider_key(provider, keys))
+    # Freeze the same pair for every tool round; never reach a third provider.
+    return tuple(provider for provider in PROVIDERS if provider_key(provider, keys))[:MAX_PROVIDERS]
+
+
+def provider_status():
+    """Developer diagnostics contain booleans only, never credential fragments."""
+    return [dict(name=p.name, label=p.label, model=p.model, configured=bool(provider_key(p)),
+                 token_configured=bool(os.getenv(p.key_env, "").strip()),
+                 account_configured=bool(cloudflare_account_id()) if p == CLOUDFLARE else None)
+            for p in PROVIDERS]
 
 
 def text_of(value):
@@ -276,7 +318,7 @@ def kind_for_status(status):
 
 
 class FreeChatTransport:
-    """两家免费服务顺序尝试：先 GLM，失败再试硅基流动，一次请求最多两家。
+    """按优先级选择已配置的两家免费服务；整次对话不访问第三家。
 
     请求是非流式的，整段响应拿到后才向界面输出；因此不存在“流式输出已开始后
     切换模型”的情况。keys/opener/clock 只供测试注入，正常运行时全部来自环境变量和标准库。
@@ -289,6 +331,7 @@ class FreeChatTransport:
         self._sleep = sleeper
         self._failed = set()
         self._rate_retry_used = False
+        self._selected = None
 
     def key(self, provider):
         return provider_key(provider, self._keys)
@@ -296,8 +339,9 @@ class FreeChatTransport:
     def available(self):
         if os.getenv("STUDYPILOT_AI_ENABLED", "1") != "1":
             raise AIError("AI 助手已暂停服务，请稍后重试。")
-        available = [(provider, self.key(provider)) for provider in PROVIDERS]
-        available = [(provider, key) for provider, key in available if key]
+        if self._selected is None:
+            self._selected = configured_providers(self._keys)
+        available = [(provider, self.key(provider)) for provider in self._selected]
         if not available:
             raise AIError("AI 服务未配置完成，暂时无法使用。其他学习功能仍可正常使用。")
         return available
@@ -353,7 +397,7 @@ class FreeChatTransport:
             raise ProviderFailure("request", "请求内容无法编码。") from None
         if len(body.encode("utf-8")) > MAX_REQUEST_BYTES:
             raise AIError("本次上下文过大，请清空对话或缩小查询范围。")
-        request = Request(provider.base_url + CHAT_PATH, data=body.encode("utf-8"), method="POST",
+        request = Request(provider_url(provider), data=body.encode("utf-8"), method="POST",
                           headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
                                    "Accept": "application/json"})
         try:
@@ -386,7 +430,7 @@ class FreeChatTransport:
             raise ProviderFailure("protocol", "响应无法解析。") from None
         if not isinstance(data, dict):
             raise ProviderFailure("protocol", "响应结构不正确。")
-        if data.get("error") and not data.get("choices"):
+        if (data.get("error") or data.get("success") is False) and not data.get("choices"):
             raise upstream_failure(provider, data)
         return data
 
@@ -402,7 +446,7 @@ class FreeChatTransport:
         if failed:
             LOG.warning("free_ai provider=%s model=%s outcome=%s status=%s ms=%d code=%s",
                         provider.name, provider.model, outcome, status if status else "-", elapsed,
-                        code if code in ZHIPU_ERRORS else "-")
+                        code if code in SAFE_CODES else "-")
         else:
             LOG.info("free_ai provider=%s model=%s outcome=%s status=%s ms=%d",
                      provider.name, provider.model, outcome, status if status else "-", elapsed)
