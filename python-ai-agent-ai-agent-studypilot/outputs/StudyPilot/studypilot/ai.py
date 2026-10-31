@@ -12,9 +12,12 @@ OpenAI 兼容的 /chat/completions，这里把内部使用的 Responses 形状
 from dataclasses import dataclass
 import json
 import logging
+import math
 import os
+import random
 import socket
 import time
+from email.utils import parsedate_to_datetime
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -60,16 +63,54 @@ KIND_TEXT = {
     "rate_limit": "限流", "timeout": "超时", "network": "连接失败", "server_error": "服务端错误",
     "auth": "身份验证失败", "request": "请求被拒绝", "protocol": "响应格式异常",
     "empty": "空的响应", "oversize": "响应过大",
+    "overloaded": "模型繁忙", "account_limit": "账号额度或余额受限",
+    "access": "账号权限或套餐受限",
+}
+
+# Only allowlisted business codes may appear in logs; never retain upstream text.
+ZHIPU_ERRORS = {
+    "1113": "account_limit", "1302": "rate_limit", "1303": "rate_limit",
+    "1305": "overloaded", "1308": "account_limit", "1310": "account_limit",
+    "1313": "account_limit", "1309": "access", "1311": "access",
+    "1314": "access", "1315": "access",
+    **{str(code): "account_limit" for code in range(1316, 1322)},
 }
 
 
 class ProviderFailure(Exception):
     """单家服务的失败；kind 只用于日志和友好提示。"""
 
-    def __init__(self, kind, message, status=None):
+    def __init__(self, kind, message, status=None, code=None, retry_after=None):
         super().__init__(message)
         self.kind = kind
         self.status = status
+        self.code = code if code in ZHIPU_ERRORS else None
+        self.retry_after = retry_after
+
+
+def retry_after_seconds(value):
+    if not isinstance(value, str) or len(value) > 128:
+        return None
+    try:
+        seconds = float(value)
+    except ValueError:
+        try:
+            seconds = parsedate_to_datetime(value).timestamp() - time.time()
+        except (ValueError, TypeError, OverflowError, OSError):
+            return None
+    return max(0, seconds) if math.isfinite(seconds) else None
+
+
+def upstream_failure(provider, data, status=None, retry_after=None):
+    error = data.get("error") if isinstance(data, dict) else None
+    code = str(error.get("code")) if isinstance(error, dict) else None
+    kind = kind_for_status(status) if status is not None else "request"
+    if provider == PRIMARY and status in (None, 429):
+        kind = ZHIPU_ERRORS.get(code, "rate_limit" if code == "429" else kind)
+    else:
+        code = None
+    return ProviderFailure(kind, "模型服务返回错误。", status=status,
+                           code=code if provider == PRIMARY else None, retry_after=retry_after)
 
 
 def provider_key(provider, keys=None):
@@ -241,11 +282,13 @@ class FreeChatTransport:
     切换模型”的情况。keys/opener/clock 只供测试注入，正常运行时全部来自环境变量和标准库。
     """
 
-    def __init__(self, keys=None, opener=None, clock=time.monotonic):
+    def __init__(self, keys=None, opener=None, clock=time.monotonic, sleeper=time.sleep):
         self._keys = dict(keys or {})
         self._opener = opener or build_opener(_NoRedirect())
         self._clock = clock
+        self._sleep = sleeper
         self._failed = set()
+        self._rate_retry_used = False
 
     def key(self, provider):
         return provider_key(provider, self._keys)
@@ -261,28 +304,47 @@ class FreeChatTransport:
 
     def create(self, payload, *, timeout):
         failures = []
-        available = [(provider, key) for provider, key in self.available() if provider.name not in self._failed]
+        configured = self.available()
+        available = [(provider, key) for provider, key in configured if provider.name not in self._failed]
         deadline = self._clock() + timeout
         for index, (provider, key) in enumerate(available):
             remaining = deadline - self._clock()
             if remaining <= 0:
                 break
-            started = self._clock()
             try:
-                # Both attempts share the caller's time budget; leave time for fallback.
-                attempt_timeout = remaining * .6 if index + 1 < len(available) else remaining
-                data = self._post(provider, key, payload, attempt_timeout)
-                result = completion_output(data)
+                result = self._attempt(provider, key, payload, deadline,
+                    fallback=index + 1 < len(available), retry=len(configured) == 1 and provider == PRIMARY)
             except ProviderFailure as failure:
                 failures.append((provider, failure))
-                self._record(provider, started, failure.kind, failure.status, failed=True)
-                if failure.kind not in {"rate_limit", "timeout", "network", "server_error"}:
+                if failure.kind not in {"rate_limit", "overloaded", "timeout", "network", "server_error"}:
                     break
                 self._failed.add(provider.name)
                 continue
-            self._record(provider, started, "ok", 200, failed=False)
             return result
         raise AIError(self._message(failures))
+
+    def _attempt(self, provider, key, payload, deadline, *, fallback, retry):
+        for attempt in range(2 if retry else 1):
+            remaining = deadline - self._clock()
+            if remaining <= 0:
+                raise ProviderFailure("timeout", "请求时间预算已耗尽。")
+            started = self._clock()
+            try:
+                # Fallback and retry share the original deadline, including backoff.
+                data = self._post(provider, key, payload, remaining * .6 if fallback else remaining)
+                result = completion_output(data)
+            except ProviderFailure as failure:
+                self._record(provider, started, failure.kind, failure.status, failed=True, code=failure.code)
+                if retry and not self._rate_retry_used and attempt == 0 and failure.code in {"1302", "1305"}:
+                    delay = failure.retry_after if failure.retry_after is not None else 2 + random.uniform(0, .5)
+                    delay = max(.25, delay)
+                    if delay + 1 < deadline - self._clock():
+                        self._rate_retry_used = True
+                        self._sleep(delay)
+                        continue
+                raise
+            self._record(provider, started, "ok", 200, failed=False)
+            return result
 
     def _post(self, provider, key, payload, timeout):
         try:
@@ -299,8 +361,15 @@ class FreeChatTransport:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
         except HTTPError as exc:
             status = exc.code
-            exc.close()
-            raise ProviderFailure(kind_for_status(status), "服务返回错误状态。", status=status) from None
+            pause = retry_after_seconds((exc.headers or {}).get("Retry-After"))
+            try:
+                raw_error = exc.read(4097)
+                data = json.loads(raw_error) if len(raw_error) <= 4096 else {}
+            except (ValueError, TypeError, AttributeError, OSError, RecursionError):
+                data = {}
+            finally:
+                exc.close()
+            raise upstream_failure(provider, data, status, pause) from None
         except URLError as exc:
             kind = "timeout" if isinstance(exc.reason, (socket.timeout, TimeoutError)) else "network"
             raise ProviderFailure(kind, "无法连接服务。") from None
@@ -318,9 +387,7 @@ class FreeChatTransport:
         if not isinstance(data, dict):
             raise ProviderFailure("protocol", "响应结构不正确。")
         if data.get("error") and not data.get("choices"):
-            code = data["error"].get("code") if isinstance(data["error"], dict) else None
-            kind = "rate_limit" if str(code) in {"429", "1302", "1303", "1305"} else "request"
-            raise ProviderFailure(kind, "服务返回错误信息。")
+            raise upstream_failure(provider, data)
         return data
 
     @staticmethod
@@ -329,12 +396,13 @@ class FreeChatTransport:
                            for provider, failure in failures)
         return f"AI 服务暂时不可用（{details or '服务不可用'}），请稍后重试；已有建议仍需你核对确认。"
 
-    def _record(self, provider, started, outcome, status, *, failed):
+    def _record(self, provider, started, outcome, status, *, failed, code=None):
         elapsed = max(0, int((self._clock() - started) * 1000))
         # 只记录非敏感信息：服务商、模型、结果、状态码、耗时。
         if failed:
-            LOG.warning("free_ai provider=%s model=%s outcome=%s status=%s ms=%d",
-                        provider.name, provider.model, outcome, status if status else "-", elapsed)
+            LOG.warning("free_ai provider=%s model=%s outcome=%s status=%s ms=%d code=%s",
+                        provider.name, provider.model, outcome, status if status else "-", elapsed,
+                        code if code in ZHIPU_ERRORS else "-")
         else:
             LOG.info("free_ai provider=%s model=%s outcome=%s status=%s ms=%d",
                      provider.name, provider.model, outcome, status if status else "-", elapsed)

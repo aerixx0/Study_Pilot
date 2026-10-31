@@ -115,6 +115,8 @@ def error_text(message, language):
     if message.startswith("AI 服务暂时不可用（") and message.endswith("），请稍后重试；已有建议仍需你核对确认。"):
         # Only translate allowlisted error categories; never echo provider text.
         categories = {"限流": "rate limit", "超时": "timeout", "连接失败": "connection failure",
+                      "模型繁忙": "model busy", "账号额度或余额受限": "account quota or balance restriction",
+                      "账号权限或套餐受限": "account access restriction",
                       "服务异常": "service error", "服务错误": "service error", "服务端错误": "service error",
                       "认证失败": "service configuration", "响应格式": "invalid response"}
         kinds = list(dict.fromkeys(label for key, label in categories.items() if key in message))

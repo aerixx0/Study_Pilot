@@ -6,6 +6,7 @@
 from dataclasses import asdict
 from datetime import date
 import json
+import io
 import os
 from pathlib import Path
 import socket
@@ -17,7 +18,7 @@ from urllib.error import HTTPError, URLError
 from fastapi.testclient import TestClient
 
 from studypilot.agent import AIError, run_agent
-from studypilot.ai import BACKUP, PRIMARY, FreeChatTransport, chat_messages, chat_payload, completion_output
+from studypilot.ai import BACKUP, PRIMARY, FreeChatTransport, chat_messages, chat_payload, completion_output, retry_after_seconds
 from studypilot.auth import AuthError, AuthStore
 from studypilot.database import ConfirmationRequired
 from studypilot.models import StudyProfile, TaskInput, ValidationError
@@ -238,6 +239,140 @@ class ProviderTests(Base):
         body = chat_payload(PRIMARY, dict(input=[{"role": "user", "content": "hi"}], tools=[], max_output_tokens=9999))
         self.assertEqual(body["max_tokens"], 1800)
         self.assertEqual(body["model"], PRIMARY.model)
+
+
+class RateLimitRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        env = patch.dict(os.environ, {'ZHIPU_API_KEY':'', 'SILICONFLOW_API_KEY':'', 'STUDYPILOT_AI_ENABLED':'1'})
+        env.start()
+        self.addCleanup(env.stop)
+        jitter = patch('studypilot.ai.random.uniform', return_value=0)
+        jitter.start()
+        self.addCleanup(jitter.stop)
+
+    def error(self, code, status=429, retry_after=None):
+        headers = {} if retry_after is None else {'Retry-After':retry_after}
+        body = json.dumps({'error':{'code':code, 'message':'PRIVATE UPSTREAM TEXT AND SECRET'}}).encode()
+        return HTTPError(PRIMARY.base_url, status, 'opaque upstream text', headers, io.BytesIO(body))
+
+    def transport(self, *answers, backup=False):
+        self.now, self.pauses = [0.0], []
+        opener = FakeOpener(*answers)
+        def sleep(delay):
+            self.pauses.append(delay)
+            self.now[0] += delay
+        keys = KEYS if backup else {'zhipu':KEYS['zhipu']}
+        transport = FreeChatTransport(keys=keys, opener=opener, clock=lambda:self.now[0], sleeper=sleep)
+        return opener, transport
+
+    def test_transient_business_codes_retry_once_without_backup(self):
+        for code in ('1302', '1305'):
+            with self.subTest(code=code):
+                opener, transport = self.transport(self.error(code), completion('Recovered'))
+                with self.assertLogs('studypilot.ai', level='INFO') as logs:
+                    self.assertEqual(transport.create({}, timeout=20)['status'], 'completed')
+                self.assertEqual(self.pauses, [2])
+                self.assertEqual([r['timeout'] for r in opener.requests], [20, 18])
+                self.assertEqual([r['body']['model'] for r in opener.requests], [PRIMARY.model]*2)
+                self.assertIn('code='+code, '\n'.join(logs.output))
+                self.assertNotIn('PRIVATE UPSTREAM', '\n'.join(logs.output))
+                self.assertNotIn(KEYS['zhipu'], '\n'.join(logs.output))
+
+    def test_retry_stops_after_two_attempts_and_does_not_repeat_agent_work(self):
+        opener, transport = self.transport(self.error('1302'), self.error('1302'), completion('Never reached'))
+        with self.assertRaises(AIError) as caught:
+            transport.create({}, timeout=20)
+        self.assertEqual(len(opener.requests), 2)
+        self.assertEqual(self.pauses, [2])
+        self.assertEqual(str(caught.exception).count(PRIMARY.label), 1)
+        with self.assertRaises(AIError):
+            transport.create({}, timeout=20)
+        self.assertEqual(len(opener.requests), 2)
+
+    def test_configured_backup_is_attempted_immediately(self):
+        opener, transport = self.transport(self.error('1305'), completion('Fallback'), backup=True)
+        transport.create({}, timeout=20)
+        self.assertEqual([r['body']['model'] for r in opener.requests], [PRIMARY.model, BACKUP.model])
+        self.assertEqual(self.pauses, [])
+
+    def test_one_extra_attempt_is_shared_across_all_tool_rounds(self):
+        opener, transport = self.transport(self.error('1302'), completion('First round'),
+            self.error('1305'), completion('Never reached'))
+        transport.create({}, timeout=20)
+        with self.assertRaises(AIError):
+            transport.create({}, timeout=20)
+        self.assertEqual(len(opener.requests), 3)
+        self.assertEqual(self.pauses, [2])
+
+    def test_error_body_is_bounded_and_untrusted_text_is_never_exposed(self):
+        for body in (b'not json SECRET', b'x'*5000, b'[]', b'{"error":{"code":"PRIVATE"}}'):
+            with self.subTest(size=len(body)):
+                failure = HTTPError(PRIMARY.base_url, 429, 'SECRET', {}, io.BytesIO(body))
+                opener, transport = self.transport(failure, completion('Never reached'))
+                with self.assertLogs('studypilot.ai', level='WARNING') as logs, self.assertRaises(AIError) as caught:
+                    transport.create({}, timeout=20)
+                self.assertEqual(len(opener.requests), 1)
+                self.assertNotIn('SECRET', str(caught.exception)+'\n'.join(logs.output))
+                self.assertNotIn('PRIVATE', str(caught.exception)+'\n'.join(logs.output))
+
+    def test_account_and_auth_errors_do_not_retry_or_fall_back(self):
+        for code, status, label in [('1113',429,'额度或余额'), ('1308',429,'额度或余额'),
+                ('1310',429,'额度或余额'), ('1315',429,'权限或套餐'),
+                ('1302',401,'身份验证'), ('1305',400,'请求被拒绝')]:
+            with self.subTest(code=code, status=status):
+                opener, transport = self.transport(self.error(code, status), completion('Never reached'), backup=True)
+                with self.assertRaisesRegex(AIError, label):
+                    transport.create({}, timeout=20)
+                self.assertEqual(len(opener.requests), 1)
+                self.assertEqual(self.pauses, [])
+
+    def test_invalid_output_and_timeout_do_not_retry_same_provider(self):
+        for failure in (socket.timeout(), {'choices':[]}, completion(tool_calls=[{'function':{}}])):
+            with self.subTest(failure=type(failure).__name__):
+                opener, transport = self.transport(failure, completion('Never reached'))
+                with self.assertRaises(AIError):
+                    transport.create({}, timeout=20)
+                self.assertEqual(len(opener.requests), 1)
+                self.assertEqual(self.pauses, [])
+
+    def test_unknown_429_is_not_retried_without_backup(self):
+        opener, transport = self.transport(self.error('unknown-secret-code'), completion('Never reached'))
+        with self.assertLogs('studypilot.ai', level='WARNING') as logs, self.assertRaises(AIError):
+            transport.create({}, timeout=20)
+        self.assertEqual(len(opener.requests), 1)
+        self.assertEqual(self.pauses, [])
+        self.assertNotIn('unknown-secret-code', '\n'.join(logs.output))
+
+    def test_retry_after_and_remaining_deadline_are_respected(self):
+        for pause, expected in [('4', [4]), ('30', [])]:
+            with self.subTest(pause=pause):
+                opener, transport = self.transport(self.error('1302', retry_after=pause), completion('Recovered'))
+                if expected:
+                    transport.create({}, timeout=20)
+                else:
+                    with self.assertRaises(AIError):
+                        transport.create({}, timeout=20)
+                self.assertEqual(self.pauses, expected)
+                self.assertEqual(len(opener.requests), 2 if expected else 1)
+        opener, transport = self.transport(self.error('1302'), completion('Never reached'))
+        original = opener.open
+        def slow(request, timeout):
+            self.now[0] += 19
+            return original(request, timeout)
+        opener.open = slow
+        with self.assertRaises(AIError):
+            transport.create({}, timeout=20)
+        self.assertEqual(len(opener.requests), 1)
+        self.assertEqual(self.pauses, [])
+
+    def test_retry_after_dates_invalid_values_and_legacy_error_body(self):
+        with patch('studypilot.ai.time.time', return_value=0):
+            self.assertEqual(retry_after_seconds('Thu, 01 Jan 1970 00:00:04 GMT'), 4)
+        for value in ('NaN', 'inf', 'not a date', '1'*129, None):
+            self.assertIsNone(retry_after_seconds(value))
+        opener, transport = self.transport({'error':{'code':1302}}, completion('Recovered'))
+        transport.create({}, timeout=20)
+        self.assertEqual(len(opener.requests), 2)
 
 
 class BusinessTests(Base):
