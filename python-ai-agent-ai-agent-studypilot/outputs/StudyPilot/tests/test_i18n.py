@@ -97,6 +97,11 @@ class EnglishWebTests(unittest.TestCase):
         self.assertIn("timeout",text)
         message="AI 服务暂时不可用（private upstream detail），请稍后重试；已有建议仍需你核对确认。"
         self.assertNotIn("private upstream detail",error_text(message,"en"))
+        for category, expected in (("模型繁忙", "model busy"),
+                ("账号额度或余额受限", "account quota or balance restriction"),
+                ("账号权限或套餐受限", "account access restriction")):
+            message=f"AI 服务暂时不可用（智谱 GLM-4.7-Flash {category}），请稍后重试；已有建议仍需你核对确认。"
+            self.assertIn(expected, error_text(message, "en"))
 
     def test_ai_language_is_validated_and_consent_is_required(self):
         with patch("studypilot.web.run_agent") as agent:
