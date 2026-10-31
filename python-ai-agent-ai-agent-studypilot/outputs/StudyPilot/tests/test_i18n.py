@@ -97,7 +97,7 @@ class EnglishWebTests(unittest.TestCase):
         self.assertIn("timeout",text)
         message="AI 服务暂时不可用（private upstream detail），请稍后重试；已有建议仍需你核对确认。"
         self.assertNotIn("private upstream detail",error_text(message,"en"))
-        for category, expected in (("模型繁忙", "model busy"),
+        for category, expected in (("模型繁忙", "model busy"), ("今日免费额度已用完", "daily free allowance exhausted"),
                 ("账号额度或余额受限", "account quota or balance restriction"),
                 ("账号权限或套餐受限", "account access restriction")):
             message=f"AI 服务暂时不可用（智谱 GLM-4.7-Flash {category}），请稍后重试；已有建议仍需你核对确认。"

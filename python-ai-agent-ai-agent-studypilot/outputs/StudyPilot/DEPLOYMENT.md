@@ -23,6 +23,8 @@
 |---|---|
 | DATABASE_URL | 必需，PostgreSQL 连接串；也兼容 POSTGRES_URL |
 | ZHIPU_API_KEY | 可选，主模型智谱 GLM-4.7-Flash 的密钥 |
+| CLOUDFLARE_ACCOUNT_ID | 可选，Cloudflare 账号 ID，32 位十六进制，须与 Token 同时配置 |
+| CLOUDFLARE_API_TOKEN | 可选，Cloudflare Workers AI Token，使用 Workers Free 免费套餐 |
 | SILICONFLOW_API_KEY | 可选，备用模型硅基流动 Xing4.0-29B 的密钥 |
 | STUDYPILOT_AI_USER_LIMIT、STUDYPILOT_AI_WINDOW_SECONDS、STUDYPILOT_AI_SITE_LIMIT | 可选，免费额度保护；默认 15 次 / 账号 / 10 分钟、400 次 / 全站 / UTC 日 |
 

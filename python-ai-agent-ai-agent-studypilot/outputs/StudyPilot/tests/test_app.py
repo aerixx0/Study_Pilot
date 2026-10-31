@@ -22,7 +22,7 @@ class AppTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         auth_root = Path(self.temp.name) / "accounts"
-        env = patch.dict(os.environ, {"STUDYPILOT_DB": str(Path(self.temp.name) / "legacy.db"), "STUDYPILOT_AUTH_DIR": str(auth_root), "ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": "", "STUDYPILOT_DEV_MODE": ""})
+        env = patch.dict(os.environ, {"STUDYPILOT_DB": str(Path(self.temp.name) / "legacy.db"), "STUDYPILOT_AUTH_DIR": str(auth_root), "ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": "", "CLOUDFLARE_API_TOKEN": "", "CLOUDFLARE_ACCOUNT_ID": "", "STUDYPILOT_DEV_MODE": ""})
         env.start()
         self.addCleanup(env.stop)
         self.auth = AuthStore(auth_root)

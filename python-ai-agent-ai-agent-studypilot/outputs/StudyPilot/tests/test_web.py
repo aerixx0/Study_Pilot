@@ -165,7 +165,7 @@ class WebTests(unittest.TestCase):
         self.assertEqual(self.client.get("/api/development").status_code,200)
 
     def test_ai_consent_and_missing_key_never_execute_business_changes(self):
-        with patch.dict(os.environ,{"ZHIPU_API_KEY":"","SILICONFLOW_API_KEY":""}):
+        with patch.dict(os.environ,{"ZHIPU_API_KEY":"","SILICONFLOW_API_KEY":"", "CLOUDFLARE_API_TOKEN":"", "CLOUDFLARE_ACCOUNT_ID":""}):
             self.assertEqual(self.call("/agent",dict(prompt="新增任务")).status_code,400)
             response=self.call("/agent",dict(prompt="新增任务",consent=True))
             self.assertEqual(response.status_code,502,response.text)

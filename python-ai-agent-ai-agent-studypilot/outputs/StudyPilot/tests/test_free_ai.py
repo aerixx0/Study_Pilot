@@ -86,7 +86,7 @@ class Base(unittest.TestCase):
         self.token = self.auth.login("learner", PASSWORD)
         self.db = self.auth.study_database(self.token)
         self.task = asdict(TaskInput("复习数学", "数学", date.today().isoformat(), 30))
-        env = patch.dict(os.environ, {"ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": "",
+        env = patch.dict(os.environ, {"ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": "", "CLOUDFLARE_API_TOKEN": "", "CLOUDFLARE_ACCOUNT_ID": "",
                                       "STUDYPILOT_AI_USER_LIMIT": "", "STUDYPILOT_AI_SITE_LIMIT": "",
                                       "STUDYPILOT_AI_WINDOW_SECONDS": ""})
         env.start()
@@ -243,7 +243,7 @@ class ProviderTests(Base):
 
 class RateLimitRecoveryTests(unittest.TestCase):
     def setUp(self):
-        env = patch.dict(os.environ, {'ZHIPU_API_KEY':'', 'SILICONFLOW_API_KEY':'', 'STUDYPILOT_AI_ENABLED':'1'})
+        env = patch.dict(os.environ, {'ZHIPU_API_KEY':'', 'SILICONFLOW_API_KEY':'', 'CLOUDFLARE_API_TOKEN':'', 'CLOUDFLARE_ACCOUNT_ID':'', 'STUDYPILOT_AI_ENABLED':'1'})
         env.start()
         self.addCleanup(env.stop)
         jitter = patch('studypilot.ai.random.uniform', return_value=0)

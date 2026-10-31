@@ -27,6 +27,8 @@ jobs:
     env:
       ZHIPU_API_KEY: ""
       SILICONFLOW_API_KEY: ""
+      CLOUDFLARE_API_TOKEN: ""
+      CLOUDFLARE_ACCOUNT_ID: ""
       STUDYPILOT_TEST_POSTGRES: "postgresql://studypilot_test:studypilot_ci_only@127.0.0.1:5432/studypilot_test"
     steps:
       - uses: actions/checkout@v4
