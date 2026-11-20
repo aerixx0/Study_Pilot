@@ -6,13 +6,12 @@ import time
 import streamlit as st
 
 from .agent import AIError, MODE_LABELS, MODES, run_agent
-from .ai import ai_configured, configured_providers
+from .ai import ai_configured, configured_providers, provider_status
 from .database import ConfirmationRequired, ConflictError
 from .models import ValidationError
 from .quota import QuotaExceeded
 from .proposals import execute_proposal, list_proposals, reject_proposal
 from .schedule_ui import render_plan
-from .theme import page_intro
 
 
 LABELS = dict(create_task="创建任务", update_task="修改任务", delete_task="删除任务",
@@ -69,13 +68,13 @@ def render_proposal(proposal):
             st.text(f"{FIELD_LABELS.get(key, key)}：{display_value(value)}")
 
 
-def proposal_panel(auth, token):
-    proposals = list_proposals(auth, token)
+def proposal_panel(auth, token, proposals, *, has_history):
     pending = [entry for entry in proposals if entry["state"] == "pending"]
-    st.subheader("待确认的修改")
-    st.caption("请核对建议内容，并勾选确认后应用更改。仅在对话中表达确认不会修改已保存的数据。")
-    if not pending:
-        st.info("暂无待确认提案。询问学习情况只会读取数据；要求修改时会在这里出现提案。")
+    if pending:
+        st.subheader(f"待确认的修改（{len(pending)}）")
+        st.caption("核对建议后，在卡片中勾选确认并执行。")
+    elif has_history:
+        st.caption("当前没有待确认的修改。")
     for proposal in pending:
         with st.container(border=True):
             render_proposal(proposal)
@@ -108,55 +107,120 @@ def proposal_panel(auth, token):
                            "收据": str(entry["result"])} for entry in completed], hide_index=True, width="stretch")
 
 
-def agent_page(auth, account):
-    page_intro("AI", "你的 AI 学习助手", "了解学习进度、梳理目标与计划，核对建议后再应用更改。", "YOUR STUDY ASSISTANT")
-    configured = ai_configured()
-    if not configured:
-        st.info(f"AI 助手暂未开放。你仍可管理学习档案、任务、计划，并处理已有建议。")
-        if account.role == "developer":
-            with st.expander("本机配置说明"):
-                st.write("在启动 StudyPilot 的同一终端设置 ZHIPU_API_KEY，或 CLOUDFLARE_API_TOKEN 与 CLOUDFLARE_ACCOUNT_ID，或 SILICONFLOW_API_KEY，然后重启服务。"
-                         "不要把 Key 发到聊天中或写进源码。")
-                st.caption("优先智谱，其次 Cloudflare，最后硅基流动；每次对话最多使用已配置的前两家，不会自动改用收费模型。Cloudflare 请保持 Workers Free 套餐。")
-    else:
-        st.caption(f"本次可用模型服务：{'、'.join(p.label for p in configured_providers())}。"
-                   f"经你同意，本次问题、对话上下文及相关学习资料将发送至模型服务商，不包含账号凭据。AI 建议可能有误，请核对后使用。")
-    mode = st.selectbox("对话模式", MODES, index=0, key="agent_mode",
-                        format_func=lambda value: MODE_LABELS[value])
+
+SUGGESTIONS = (
+    ("总结本周进度", "帮我总结本周的学习进度，并建议下一步。", "chat"),
+    ("梳理学习目标", "和我一起梳理学习目标，先讨论，不要直接修改。", "goal_coach"),
+    ("安排每周计划", "根据我的任务和可用时间生成本周计划建议。", "plan_builder"),
+)
+
+
+def start_new_chat():
+    for key in ("agent_history", "agent_trace", "agent_prompt", "agent_consent", "agent_mode"):
+        st.session_state.pop(key, None)
+
+
+def fill_suggestion(prompt, mode):
+    st.session_state["agent_prompt"] = prompt
+    st.session_state["agent_mode"] = mode
+    st.session_state.pop("agent_consent", None)
+
+
+def render_thread(history):
+    if not history:
+        st.markdown(
+            '<div class="pilot-chat-welcome"><div class="pilot-chat-mark" aria-hidden="true">↗</div>'
+            '<h2>今天，想推进什么？</h2><p>聊聊学习目标，或者安排接下来的学习计划。</p></div>',
+            unsafe_allow_html=True,
+        )
+        with st.container(key="assistant-suggestions", horizontal=True, horizontal_alignment="center", gap="small"):
+            for label, prompt, mode in SUGGESTIONS:
+                st.button(label, key=f"assistant-suggest-{mode}", icon=":material/north_east:",
+                          on_click=fill_suggestion, args=(prompt, mode))
+        return
+    for index, message in enumerate(history):
+        role = message["role"]
+        avatar = ":material/north_east:" if role == "assistant" else None
+        with st.container(key=f"assistant-message-{role}-{index}"), st.chat_message(role, avatar=avatar):
+            st.text(message["content"], width="stretch")
+
+
+def agent_page(auth):
+    configured = ai_configured(local=True)
+    token = st.session_state.get("auth_token")
     history = st.session_state.setdefault("agent_history", [])
-    if st.button("清空对话", key="agent_clear"):
-        st.session_state["agent_history"] = []
-        st.session_state.pop("agent_trace", None)
-        st.rerun()
-    for message in history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    st.caption("对话在刷新或退出后清除。待确认建议和应用记录保存在你的账号中，清空对话不影响已有建议。")
-    with st.form("agent_question", clear_on_submit=False):
-        prompt = st.text_area("你想查询或调整什么？", key="agent_prompt", max_chars=3000,
-                              placeholder="例如：看看我本周的学习情况；把任务 #1 延后到下周一，先给我看修改提案。")
-        consent = st.checkbox("我同意将本次问题、对话上下文及相关学习资料发送至上述模型服务商", key="agent_consent")
-        submitted = st.form_submit_button("发送给学习助手", type="primary", disabled=not configured)
-    if submitted:
-        if not consent:
-            st.error("请先同意本次使用相关学习资料。输入内容已保留。")
-        else:
-            try:
-                with st.status("正在分析；修改只会生成提案…", expanded=True) as status:
-                    def show_tool(name, state):
-                        st.write(f"{'待确认建议' if state == 'pending' else '读取中' if state == 'read' else '未完成'}：{TOOL_LABELS.get(name, '处理学习请求')}")
-                    result = run_agent(auth, st.session_state.get("auth_token"), prompt, mode=mode, history=history, on_tool=show_tool)
-                    status.update(label="已完成，修改仍需你确认", state="complete", expanded=False)
-                st.session_state["agent_history"] = (history + [{"role": "user", "content": prompt},
-                    {"role": "assistant", "content": result.text}])[-12:]
-                st.session_state["agent_trace"] = result.trace
-                st.session_state["clear_submitted_fields"] = ("agent_prompt",)
-                st.rerun()
-            except (AIError, ValidationError, ConflictError, QuotaExceeded) as exc:
-                st.error(str(exc))
-    if st.session_state.get("agent_trace"):
-        with st.expander("本次处理记录"):
-            st.dataframe([{"操作": TOOL_LABELS.get(row["tool"], "处理学习请求"),
-                           "状态": {"read": "已读取", "pending": "待确认", "error": "未完成"}.get(row["state"], "未完成")}
-                          for row in st.session_state["agent_trace"]], hide_index=True, width="stretch")
-    proposal_panel(auth, st.session_state.get("auth_token"))
+    proposals = list_proposals(auth, token)
+
+    with st.container(key="assistant-workspace"):
+        with st.container(key="assistant-topbar", horizontal=True, horizontal_alignment="distribute",
+                          vertical_alignment="center"):
+            st.markdown("**对话**")
+            st.button("新建对话", key="agent_clear", type="tertiary", icon=":material/add:",
+                      on_click=start_new_chat)
+
+        thread = st.container(key="assistant-transcript", height=390 if history or proposals else "content",
+                              border=False, autoscroll=bool(history))
+        with thread:
+            render_thread(history)
+
+        with st.container(key="assistant-dock"):
+            if not configured:
+                st.caption("对话服务暂未开放。学习管理和已有提案仍可使用。")
+            with st.form("agent_question", clear_on_submit=False):
+                prompt = st.text_area("发送消息", key="agent_prompt", height=80, max_chars=3000,
+                                      label_visibility="collapsed", placeholder="向 StudyPilot 提问")
+                with st.container(key="assistant-controls", horizontal=True, horizontal_alignment="distribute",
+                                  vertical_alignment="center"):
+                    mode = st.selectbox("对话模式", MODES, key="agent_mode", format_func=MODE_LABELS.__getitem__,
+                                        label_visibility="collapsed", width=190)
+                    submitted = st.form_submit_button("发送", type="primary", disabled=not configured,
+                                                      icon=":material/arrow_upward:")
+                consent = st.checkbox("我同意本次对话使用相关学习资料", key="agent_consent")
+
+            if submitted and not consent:
+                st.error("请先同意本次使用相关学习资料。问题已保留。")
+            elif submitted:
+                try:
+                    with st.status("正在思考…", expanded=False):
+                        def show_tool(name, state):
+                            label = {"pending": "待确认提案", "read": "只读查询"}.get(state, "未完成")
+                            st.write(f"{label}：{TOOL_LABELS.get(name, '处理学习请求')}")
+                        result = run_agent(auth, token, prompt, mode=mode, history=history, on_tool=show_tool, local=True)
+                    st.session_state["agent_history"] = (history + [{"role": "user", "content": prompt},
+                        {"role": "assistant", "content": result.text}])[-12:]
+                    st.session_state["agent_trace"] = result.trace
+                    st.session_state["clear_submitted_fields"] = ("agent_prompt", "agent_consent")
+                    st.rerun()
+                except (AIError, ValidationError, ConflictError, QuotaExceeded) as exc:
+                    st.error(f"{exc} 问题已保留，可修改后重新发送。")
+                    proposals = list_proposals(auth, token)
+
+            if configured:
+                providers = configured_providers(local=True)
+                if any(provider.name == "cloudflare" for provider in providers):
+                    st.caption("本机模型优先。若使用 Cloudflare 备用，问题、上下文及相关学习资料会发给 "
+                               "Cloudflare。AI 建议请先核对。")
+                else:
+                    st.caption("问题和学习资料在本机处理。AI 建议请先核对。对话在刷新或退出后清除。")
+            with st.expander("本地 AI 连接状态"):
+                for provider in provider_status(local=True):
+                    if provider["name"] == "llamacpp":
+                        status = "已就绪，无需 API Key" if provider["configured"] else "本机模型未就绪"
+                    elif provider["configured"]:
+                        status = "已读取凭据"
+                    elif provider["name"] == "cloudflare" and provider["token_configured"]:
+                        status = "缺少有效的 Cloudflare Account ID"
+                    else:
+                        status = "缺少 API 密钥"
+                    st.write(f"{provider['label']} · {status}")
+                st.caption("Cloudflare 是可选备用。在开始菜单「配置 StudyPilot AI」中输入 Cloudflare 凭据。"
+                           "Cloudflare 请使用 Workers Free。")
+
+        with thread:
+            proposal_panel(auth, token, proposals, has_history=bool(history))
+            if trace := st.session_state.get("agent_trace"):
+                with st.expander("本次处理记录"):
+                    st.dataframe([{"操作": TOOL_LABELS.get(row["tool"], "处理学习请求"),
+                                   "状态": {"read": "只读查询", "pending": "待确认提案", "error": "未完成"}.get(
+                                       row["state"], "未完成")}
+                                  for row in trace], hide_index=True, width="stretch")

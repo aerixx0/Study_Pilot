@@ -40,6 +40,7 @@ async function api(path,method="GET",body){
 function clearPrivate(){StudyWorkflow.clear();StudyMotion.workspace(false,false);StudyMotion.reset();$("#content").replaceChildren();renderedView=null;authEpoch++;chatPending=false;me=data=null;history=[];trace=[];preview=null;sessions=[];drafts.clear();page="overview";}
 function saveDrafts(){
   document.querySelectorAll("#content > .page:not(.page-leaving) form").forEach(form=>{
+    if(form.dataset.kind==="desktop-connect")return;
     const values={};form.querySelectorAll("input,select,textarea").forEach(input=>{if(input.name)values[input.name]=input.type==="checkbox"?input.checked:input.value;});
     drafts.set(form.id,values);
   });
@@ -143,7 +144,20 @@ function records(){
 }
 function account(){
   const p=data.personal;
-  return head("06 / YOUR ACCOUNT",T("账号与安全"),T("个人资料、账号安全和数据管理。"))+'<form id="personal-'+p.version+'" data-kind="personal" data-version="'+p.version+T('" class="card"><h3>个人资料</h3><div class="grid">')+input("nickname",T("昵称"),p.nickname,"text",'maxlength="64" required')+select("avatar",T("头像标识"),me.options.avatars,p.avatar)+'</div>'+input("bio",T("个性签名"),p.bio,"text",'maxlength="120"')+confirm()+submit(T("保存个人资料"))+T('</form><details><summary>修改密码</summary><form id="password-change" data-kind="password">')+input("current_password",T("当前密码"),"","password",'autocomplete="current-password" required')+input("new_password",T("新密码"),"","password",'autocomplete="new-password" maxlength="128" required')+input("password_again",T("再次输入新密码"),"","password",'autocomplete="new-password" required')+confirm(T("我确认更新密码和恢复码，并退出全部旧会话"))+submit(T("更新密码"))+T('</form></details><details><summary>登录会话管理</summary><button class="btn" data-action="load-sessions">查看有效登录会话</button><div id="session-list">')+sessionList()+'</div><form id="revoke-sessions" data-kind="revoke-sessions">'+confirm(T("我确认退出其他登录会话"))+submit(T("退出其他会话"))+T('</form></details><div class="card"><h3>个人学习数据</h3><p class="muted">导出自己的资料、任务、记录、计划、提案与执行收据。不包含密码、恢复码和登录令牌。</p><a class="btn" href="/api/export" download="StudyPilot-export.json">导出学习数据</a></div>');
+  return head("06 / YOUR ACCOUNT",T("账号与安全"),T("个人资料、账号安全和数据管理。"))+'<form id="personal-'+p.version+'" data-kind="personal" data-version="'+p.version+T('" class="card"><h3>个人资料</h3><div class="grid">')+input("nickname",T("昵称"),p.nickname,"text",'maxlength="64" required')+select("avatar",T("头像标识"),me.options.avatars,p.avatar)+'</div>'+input("bio",T("个性签名"),p.bio,"text",'maxlength="120"')+confirm()+submit(T("保存个人资料"))+T('</form><details><summary>修改密码</summary><form id="password-change" data-kind="password">')+input("current_password",T("当前密码"),"","password",'autocomplete="current-password" required')+input("new_password",T("新密码"),"","password",'autocomplete="new-password" maxlength="128" required')+input("password_again",T("再次输入新密码"),"","password",'autocomplete="new-password" required')+confirm(T("我确认更新密码和恢复码，并退出全部旧会话"))+submit(T("更新密码"))+T('</form></details><details><summary>登录会话管理</summary><button class="btn" data-action="load-sessions">查看有效登录会话</button><div id="session-list">')+sessionList()+'</div><form id="revoke-sessions" data-kind="revoke-sessions">'+confirm(T("我确认退出其他登录会话"))+submit(T("退出其他会话"))+T('</form></details><div class="card"><h3>个人学习数据</h3><p class="muted">导出自己的资料、任务、记录、计划、提案与执行收据。不包含密码、恢复码和登录令牌。</p><a class="btn" href="/api/export" download="StudyPilot-export.json">导出学习数据</a></div>')+desktopAI();
+}
+function desktopAI(){
+  if(me.desktop){
+    return '<details><summary>'+E(T("云端 AI"))+'</summary><p>'+E(T("连接后，可在本机使用网页版的 Qwen 和 GPT-OSS。只有你确认发送的问题和相关资料才会传给云端。"))+'</p>'+
+      '<a class="btn" href="'+E(me.desktop_ai_origin)+'/#account" target="_blank" rel="noopener noreferrer">'+E(T("打开网页版生成连接码"))+'</a>'+
+      '<form id="desktop-connect" data-kind="desktop-connect">'+input("code",T("一次性连接码"),"","password",'required maxlength="49" autocomplete="off"')+submit(T(me.desktop_ai_linked?"重新连接":"启用云端 AI"))+'</form>'+
+      (me.desktop_ai_linked?'<button type="button" class="btn" data-action="desktop-disconnect">'+E(T("断开本机连接"))+'</button>':"")+'</details>';
+  }
+  if(!me.desktop_ai_available)return "";
+  return '<details><summary>'+E(T("连接 Windows 版 AI"))+'</summary><p>'+E(T("连接码十分钟内仅能使用一次。连接后，本机可调用云端模型，授权有效期为 30 天。"))+'</p>'+
+    '<button type="button" class="btn" data-action="desktop-issue">'+E(T("生成连接码"))+'</button>'+
+    '<input id="desktop-link-code" aria-label="'+E(T("一次性连接码"))+'" readonly hidden>'+
+    '<form id="desktop-revoke" data-kind="desktop-revoke">'+confirm(T("撤销此账号所有桌面 AI 授权"))+submit(T("撤销桌面授权"))+'</form></details>';
 }
 function sessionList(){return sessions.length?table([T("登录时间"),T("最近活动"),T("会话")],sessions.map(s=>[E(StudyI18n.timestamp(s.created_at)),E(StudyI18n.timestamp(s.last_seen)),s.current?T("当前"):T("其他")])):"";}
 function proposal(p){
@@ -157,16 +171,18 @@ function proposal(p){
 }
 function assistant(){
   const providers=(me.ai_providers||[]).map(T).join(' / ');
+  const models=(me.ai_models||[]).length>1?'<label class="composer-mode"><span class="sr-only">'+E(T("选择模型"))+'</span><select name="model"><option value="">'+E(T("自动选择"))+'</option>'+me.ai_models.map(model=>'<option value="'+E(model.id)+'">'+E(model.label)+'</option>').join("")+'</select></label>':"";
+  const setup=me.desktop&&!me.desktop_ai_linked?'<button type="button" class="btn small" data-page="account">'+E(T("连接云端 AI"))+'</button>':"";
   const pending=data.proposals.filter(p=>p.state==="pending"),applied=data.proposals.filter(p=>p.state==="applied").slice(0,5);
   const suggestions=[[T('总结本周进度'),T('帮我总结本周的学习进度，并建议下一步。'),'chat'],[T('梳理学习目标'),T('和我一起梳理学习目标，先讨论，不要直接修改。'),'goal_coach'],[T('安排每周计划'),T('根据我的任务和可用时间生成本周计划建议。'),'plan_builder']];
   const welcome=!history.length?T('<div class="conversation-welcome"><div class="conversation-mark" aria-hidden="true">↗</div><p class="conversation-eyebrow">YOUR NEXT CHAPTER</p><h1>今天，想推进什么？</h1><p>聊聊目标，理清计划。让每一步都有方向。</p><div class="conversation-suggestions">')+suggestions.map(([label,prompt,mode])=>'<button type="button" data-prompt="'+E(prompt)+'" data-mode="'+mode+'">'+E(T(label))+'<span aria-hidden="true">↗</span></button>').join("")+'</div></div>':"";
   const messages=history.map(m=>'<article class="conversation-message '+m.role+'">'+(m.role==="assistant"?'<div class="message-mark" aria-hidden="true">↗</div>':"")+'<div class="message-body"><span class="sr-only">'+(m.role==="user"?T("你"):"StudyPilot")+'</span>'+E(m.content)+'</div></article>').join("");
   const review=pending.length?T('<section class="conversation-review"><h2>待确认的修改 <span>')+pending.length+T('</span></h2><p class="muted">核对建议后，在卡片中确认应用。</p>')+pending.map(proposal).join("")+'</section>':"";
-  return T('<div class="conversation"><div class="conversation-scroll" tabindex="0" aria-label="对话内容"><div class="conversation-thread">')+welcome+'<div class="conversation-messages" role="log" aria-live="polite">'+messages+'</div>'+review+(trace.length?T('<details class="conversation-detail"><summary>本次处理记录</summary>')+table([T("操作"),T("状态")],trace.map(t=>[E(T(toolLabels[t.tool]||T("处理学习请求"))),E(t.state==="pending"?T("待确认提案"):t.state==="read"?T("只读查询"):T("参数未通过"))]))+'</details>':"")+(applied.length?T('<details class="conversation-detail"><summary>最近应用记录</summary>')+table([T("建议"),T("操作"),T("时间")],applied.map(p=>[E(p.id.slice(0,8)),E(T(actionNames[p.action])),E(StudyI18n.timestamp(p.applied_at))]))+'</details>':"")+(!pending.length&&history.length?T('<p class="conversation-note">当前没有待确认的修改。</p>'):"")+'</div></div><div class="composer-dock">'+(!me.ai_configured?T('<p class="conversation-availability">对话服务暂未开放，学习管理功能仍可正常使用。</p>'):"")+T('<form id="agent-chat" data-kind="agent-chat" class="composer"><label class="sr-only" for="conversation-prompt">发送消息</label><textarea id="conversation-prompt" name="prompt" rows="2" maxlength="3000" placeholder="向 StudyPilot 提问" required></textarea><div class="composer-toolbar"><label class="composer-mode"><span class="sr-only">对话模式</span><select name="mode">')+me.modes.values.map(v=>'<option value="'+E(v)+'">'+E(T(me.modes.labels[v]||v))+'</option>').join("")+'</select></label><small id="agent-status" role="status">'+(chatPending?T("正在思考…"):"")+T('</small><button class="composer-send" type="submit" aria-label="发送消息" title="发送消息"')+(me.ai_configured&&!chatPending?"":" disabled")+T('><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div><label class="composer-consent"><input type="checkbox" name="consent">我同意本次对话使用相关学习资料</label></form><p class="composer-disclosure">经你同意，问题、上下文及相关学习资料将发送至以下已配置服务（可能包含境外服务），不含账号凭据。AI 建议可能有误，修改仍需确认。对话在刷新或退出后清除。 ')+E(providers)+'</p></div></div>';
+  return T('<div class="conversation"><div class="conversation-scroll" tabindex="0" aria-label="对话内容"><div class="conversation-thread">')+welcome+'<div class="conversation-messages" role="log" aria-live="polite">'+messages+'</div>'+review+(trace.length?T('<details class="conversation-detail"><summary>本次处理记录</summary>')+table([T("操作"),T("状态")],trace.map(t=>[E(T(toolLabels[t.tool]||T("处理学习请求"))),E(t.state==="pending"?T("待确认提案"):t.state==="read"?T("只读查询"):T("参数未通过"))]))+'</details>':"")+(applied.length?T('<details class="conversation-detail"><summary>最近应用记录</summary>')+table([T("建议"),T("操作"),T("时间")],applied.map(p=>[E(p.id.slice(0,8)),E(T(actionNames[p.action])),E(StudyI18n.timestamp(p.applied_at))]))+'</details>':"")+(!pending.length&&history.length?T('<p class="conversation-note">当前没有待确认的修改。</p>'):"")+'</div></div><div class="composer-dock">'+setup+(!me.ai_configured?T('<p class="conversation-availability">对话服务暂未开放，学习管理功能仍可正常使用。</p>'):"")+T('<form id="agent-chat" data-kind="agent-chat" class="composer"><label class="sr-only" for="conversation-prompt">发送消息</label><textarea id="conversation-prompt" name="prompt" rows="2" maxlength="3000" placeholder="向 StudyPilot 提问" required></textarea><div class="composer-toolbar"><label class="composer-mode"><span class="sr-only">对话模式</span><select name="mode">')+me.modes.values.map(v=>'<option value="'+E(v)+'">'+E(T(me.modes.labels[v]||v))+'</option>').join("")+'</select></label>'+models+'<small id="agent-status" role="status">'+(chatPending?T("正在思考…"):"")+T('</small><button class="composer-send" type="submit" aria-label="发送消息" title="发送消息"')+(me.ai_configured&&!chatPending?"":" disabled")+T('><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div><label class="composer-consent"><input type="checkbox" name="consent">我同意本次对话使用相关学习资料</label></form><p class="composer-disclosure">经你同意，问题、上下文及相关学习资料将发送至以下已配置服务（可能包含境外服务），不含账号凭据。AI 建议可能有误，修改仍需确认。对话在刷新或退出后清除。 ')+E(providers)+'</p></div></div>';
 }
 function development(){
   const setup=table([T('模型服务'),T('配置状态')],(me.ai_setup||[]).map(p=>[E(T(p.label)),E(p.configured?T('已配置'):p.name==='cloudflare'&&p.token_configured?T('缺少有效的 Account ID'):T('尚未配置'))]));
-  return head("DEV / DEVELOPMENT PROGRESS",T("功能与维护"),T("查看已启用功能与后续维护事项。此页面仅对开发者开放。"))+T('<div class="card"><h3>AI 服务配置</h3>')+setup+T('<p>智谱优先，Cloudflare 其次，硅基流动最后；每次对话最多使用前两家已配置服务。Cloudflare 请保持 Workers Free 套餐，免费额度耗尽后停止调用。</p><p>Cloudflare 需要 CLOUDFLARE_ACCOUNT_ID 与 CLOUDFLARE_API_TOKEN。请在服务器或部署平台配置，浏览器不会读取密钥。</p><div class="actions"><a class="btn small" href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">打开 Cloudflare</a><a class="btn small" href="https://vercel.com/aerixx/study-pilot/settings/environment-variables" target="_blank" rel="noopener noreferrer">打开 Vercel 环境变量</a></div></div><div class="card"><h3>已完成</h3><p>账号与个人资料管理、学习档案、任务与记录、每周计划、进度统计、AI 学习建议与用户确认。</p><h3>后续维护事项</h3><p>目标里程碑完成率、考试优先级自动调整。</p></div>');
+  return head("DEV / DEVELOPMENT PROGRESS",T("功能与维护"),T("查看已启用功能与后续维护事项。此页面仅对开发者开放。"))+T('<div class="card"><h3>AI 服务配置</h3>')+setup+T('<p>检查当前可用的模型和账号配置。Cloudflare 请保持 Workers Free 套餐，免费额度耗尽后停止调用。</p><p>Cloudflare 需要 CLOUDFLARE_ACCOUNT_ID 与 CLOUDFLARE_API_TOKEN。请在服务器或部署平台配置，浏览器不会读取密钥。</p><div class="actions"><a class="btn small" href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">打开 Cloudflare</a><a class="btn small" href="https://vercel.com/aerixx/study-pilot/settings/environment-variables" target="_blank" rel="noopener noreferrer">打开 Vercel 环境变量</a></div></div><div class="card"><h3>已完成</h3><p>账号与个人资料管理、学习档案、任务与记录、每周计划、进度统计、AI 学习建议与用户确认。</p><h3>后续维护事项</h3><p>目标里程碑完成率、考试优先级自动调整。</p></div>');
 }
 async function refresh(){data=await api("/state");me.personal=data.personal;}
 function numeric(form,name){return Number(new FormData(form).get(name));}
@@ -174,10 +190,19 @@ async function submitForm(form){
   const fd=new FormData(form),get=name=>String(fd.get(name)||""),checked=name=>fd.has(name),kind=form.dataset.kind;
   const body={confirmed:checked("confirmed")};
   let path="",method="POST",success=T("已保存。");
-  if(kind==="login"){const identity=await api("/login","POST",{username:get("username"),password:get("password")});clearPrivate();me=identity;await refresh();notice("");render();return;}
+  if(kind==="login"){const identity=await api("/login","POST",{username:get("username"),password:get("password")});clearPrivate();me=identity;if(location.hash==="#account")page="account";await refresh();notice("");render();return;}
   if(kind==="register"||kind==="recover"){
     const payload=kind==="register"?{username:get("username"),password:get("password"),password_again:get("password_again"),...body}:{username:get("username"),recovery_code:get("recovery_code"),new_password:get("new_password"),password_again:get("password_again"),...body};
     const result=await api(kind==="register"?"/register":"/recover","POST",payload);drafts.clear();recoveryCode=result.recovery_code;form.reset();render();return;
+  }
+  if(kind==="desktop-connect"){
+    me=await api("/desktop-ai/connect","POST",{code:get("code").trim()});
+    form.reset();render();notice(T("已连接云端 AI。"));return;
+  }
+  if(kind==="desktop-revoke"){
+    if(!checked("confirmed"))throw new Error(T("请确认撤销桌面授权。"));
+    await api("/desktop-ai/revoke","POST",{confirmed:true});form.reset();
+    const code=$("#desktop-link-code");code.value="";code.hidden=true;notice(T("已撤销桌面授权。"));return;
   }
   if(kind==="profile"){
     const levels={},priorities={},availability={};
@@ -205,7 +230,7 @@ async function submitForm(form){
     document.querySelectorAll('[data-action="clear-chat"]').forEach(button=>button.disabled=true);
     const status=$("#agent-status");if(status)status.textContent=T("正在思考…");
     let result;
-    try{result=await api("/agent","POST",{prompt:get("prompt"),mode:get("mode")||"chat",consent:checked("consent"),history,language:StudyI18n.language});}
+    try{result=await api("/agent","POST",{prompt:get("prompt"),mode:get("mode")||"chat",consent:checked("consent"),history,language:StudyI18n.language,model:get("model")});}
     catch(error){try{data=await api("/state");saveDrafts();render();}catch{}if(me)error.message+=" "+T("问题已保留，可修改后重新发送。");throw error;}
     history=[...history,{role:"user",content:get("prompt")},{role:"assistant",content:result.text}].slice(-12);trace=result.trace;
     await refresh();drafts.delete(form.id);render();notice(T("答复已生成，修改仍需在提案卡片中确认。"));return;
@@ -261,12 +286,20 @@ document.addEventListener("click",async event=>{
       case "logout":await api("/logout","POST",{});clearPrivate();render();notice(T("已退出登录。"));break;
       case "saved-recovery":recoveryCode="";authPage="login";render();notice("");break;
       case "clear-chat":if(chatPending)break;history=[];trace=[];drafts.delete("agent-chat");delete document.body.dataset.sidebarOpen;$("#workspace-menu").setAttribute("aria-expanded","false");render();$("#conversation-prompt")?.focus();break;
+      case "desktop-issue":{
+        button.disabled=true;
+        const result=await api("/desktop-ai/issue","POST",{});
+        const code=$("#desktop-link-code");if(code){code.value=result.code;code.hidden=false;code.focus();code.select();}
+        button.disabled=false;break;
+      }
+      case "desktop-disconnect":
+        me=await api("/desktop-ai/disconnect","POST",{});render();notice(T("已断开本机连接。"));break;
       case "load-sessions":sessions=await api("/sessions");$("#session-list").innerHTML=sessionList();break;
     }
   }catch(error){notice(error.message,"error");button.disabled=false;}
 });
 async function boot(){
-  try{const health=await api("/health");accountServiceReady=health.database_configured;if(!accountServiceReady){render();return;}me=await api("/me");await refresh();render();}
+  try{const health=await api("/health");accountServiceReady=health.database_configured;if(!accountServiceReady){render();return;}me=await api("/me");if(location.hash==="#account")page="account";await refresh();render();}
   catch(error){clearPrivate();render();if(error.status!==401)notice(error.message,"error");}
 }
 boot();

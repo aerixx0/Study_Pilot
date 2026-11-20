@@ -99,6 +99,26 @@ class Base(unittest.TestCase):
 
 
 class ProviderTests(Base):
+    def test_local_qwen_has_no_key_and_falls_back_to_cloudflare_on_failure(self):
+        creds = {"CLOUDFLARE_API_TOKEN": "not-a-real-cloudflare-token",
+                 "CLOUDFLARE_ACCOUNT_ID": "8" * 32}
+        with (patch("studypilot.ai.local_credentials", return_value=creds),
+              patch("studypilot.ai.model_ready", return_value=True)):
+            opener = FakeOpener(http_error(503),
+                                completion(tool_calls=[function_call("get_study_profile", {})]),
+                                completion("已查询学习档案。"))
+            transport = FreeChatTransport(local=True, opener=opener)
+            run_agent(self.auth, self.token, "看看档案", transport=transport)
+        self.assertEqual([r["body"]["model"] for r in opener.requests],
+                         ["qwen3.5:4b", "@cf/openai/gpt-oss-20b", "@cf/openai/gpt-oss-20b"])
+        self.assertIs(opener.requests[0]["body"]["chat_template_kwargs"]["enable_thinking"], False)
+        self.assertNotIn("Authorization", opener.requests[0]["market"])
+        self.assertEqual(opener.requests[0]["url"], "http://127.0.0.1:11435/v1/chat/completions")
+        self.assertEqual(opener.requests[1]["body"]["reasoning_effort"], "low")
+        self.assertTrue(opener.requests[1]["body"]["tools"])
+        self.assertEqual(opener.requests[2]["body"]["messages"][-1]["role"], "tool")
+        self.assertEqual(self.db.get_tasks(), [])
+
     def test_failed_primary_is_not_retried_in_later_tool_round(self):
         opener, transport = self.chat(http_error(429), completion(tool_calls=[function_call("get_study_profile", {})]),
                                       completion("已读取，未修改。"))

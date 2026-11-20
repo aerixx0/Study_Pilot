@@ -227,8 +227,9 @@ class PostgresDatabase(Database):
 
 class PostgresAuthStore(AuthStore):
     def __init__(self, source=None):
+        from .relay import DDL as RELAY_DDL
         self.source = source or Postgres()
-        self.source.initialize("sp_auth", AUTH_DDL)
+        self.source.initialize("sp_auth", AUTH_DDL + RELAY_DDL)
 
     def connection(self):
         return self.source.connection("sp_auth")

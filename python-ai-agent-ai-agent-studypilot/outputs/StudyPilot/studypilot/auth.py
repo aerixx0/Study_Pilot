@@ -19,6 +19,7 @@ SESSION_SECONDS = 12 * 60 * 60
 IDLE_SECONDS = 30 * 60
 SCRYPT_N = 2 ** 17
 USERNAME_MAX_LENGTH = 64
+HOSTED_PASSWORD_MIN_LENGTH = 15
 AVATARS = ("📚", "🌱", "🚀", "🐱", "🐼", "🎨", "⭐", "🌻")
 LOGIN_ERROR = "用户名、密码或恢复码不正确，或尝试过于频繁，请稍后重试。"
 
@@ -46,9 +47,9 @@ def normalize_username(value):
     return username
 
 
-def validate_password(password):
-    if not isinstance(password, str) or not 15 <= len(password) <= 128:
-        raise ValidationError("密码须为 15–128 个字符，可以使用较长的短语。")
+def validate_password(password, minimum_length=HOSTED_PASSWORD_MIN_LENGTH):
+    if not isinstance(password, str) or not minimum_length <= len(password) <= 128:
+        raise ValidationError(f"密码须为 {minimum_length}–128 个字符，可以使用较长的短语。")
     if not password.strip() or len(set(password)) == 1:
         raise ValidationError("请使用较难猜测的密码，避免空白或重复的单个字符。")
 
@@ -78,6 +79,8 @@ def fingerprint(value):
 
 
 class AuthStore:
+    minimum_password_length = HOSTED_PASSWORD_MIN_LENGTH
+
     def __init__(self, root):
         self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
@@ -86,11 +89,13 @@ class AuthStore:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
             if version not in (0, 1):
                 raise ValidationError("账号数据库版本较新，请使用匹配版本的 StudyPilot。")
-            required = {"accounts", "auth_sessions", "auth_attempts", "account_profiles", "ai_usage", "ai_site_usage"}
+            required = {"accounts", "auth_sessions", "auth_attempts", "account_profiles", "ai_usage", "ai_site_usage",
+                        "desktop_ai_tokens"}
             existing = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             # 已有完整结构只读检查；旧版缺表仍进入兼容建表路径。
             if version == 1 and required <= existing:
                 return
+            from .relay import DDL as RELAY_DDL
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS accounts (
                     id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL,
@@ -121,7 +126,7 @@ class AuthStore:
                     day TEXT PRIMARY KEY, used INTEGER NOT NULL
                 );
                 PRAGMA user_version = 1;
-            """)
+            """ + RELAY_DDL)
 
     @contextmanager
     def connection(self):
@@ -137,7 +142,7 @@ class AuthStore:
     def register(self, username, password, *, confirmed=False):
         require_confirmation(confirmed)
         username = normalize_username(username)
-        validate_password(password)
+        validate_password(password, self.minimum_password_length)
         recovery = secrets.token_urlsafe(32)
         encoded = password_hash(password)
         account = Account(uuid.uuid4().hex, username, "user")
@@ -194,6 +199,7 @@ class AuthStore:
                     conn.execute("UPDATE accounts SET password_hash=?, recovery_hash=? WHERE id=?",
                                  (password_hash(new_password), fingerprint(next_code), row["id"]))
                     conn.execute("DELETE FROM auth_sessions WHERE account_id=?", (row["id"],))
+                    conn.execute("DELETE FROM desktop_ai_tokens WHERE account_id=?", (row["id"],))
                     outcome = next_code
                 else:
                     token = secrets.token_urlsafe(32)
@@ -213,7 +219,7 @@ class AuthStore:
 
     def reset_password(self, username, recovery_code, new_password, *, confirmed=False):
         require_confirmation(confirmed)
-        validate_password(new_password)
+        validate_password(new_password, self.minimum_password_length)
         return self._credentials(username, recovery_code, recovery=True, new_password=new_password)
 
     def authenticate(self, token):
@@ -328,7 +334,7 @@ class AuthStore:
 
     def change_password(self, token, current_password, new_password, *, confirmed=False):
         require_confirmation(confirmed)
-        validate_password(new_password)
+        validate_password(new_password, self.minimum_password_length)
         account = self.authenticate(token)
         if account is None:
             raise AuthError("登录已失效，请重新登录。")
@@ -347,6 +353,7 @@ class AuthStore:
                 conn.execute("UPDATE accounts SET password_hash=?, recovery_hash=? WHERE id=?",
                              (password_hash(new_password), fingerprint(next_code), account.id))
                 conn.execute("DELETE FROM auth_sessions WHERE account_id=?", (account.id,))
+                conn.execute("DELETE FROM desktop_ai_tokens WHERE account_id=?", (account.id,))
         finally:
             # 验证用的临时会话无论成功失败都撤销，不留下多余凭据。
             self.logout(checked_token)
@@ -417,3 +424,8 @@ class AuthStore:
                     placeholders = ','.join('?' for _ in columns)
                     dst.executemany(f"INSERT INTO {table} VALUES ({placeholders})", rows)
         return target
+
+class LocalAuthStore(AuthStore):
+    """Password policy for the local Streamlit application."""
+
+    minimum_password_length = 6

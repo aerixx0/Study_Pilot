@@ -23,6 +23,8 @@ class AppTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         auth_root = Path(self.temp.name) / "accounts"
         env = patch.dict(os.environ, {"STUDYPILOT_DB": str(Path(self.temp.name) / "legacy.db"), "STUDYPILOT_AUTH_DIR": str(auth_root), "ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": "", "CLOUDFLARE_API_TOKEN": "", "CLOUDFLARE_ACCOUNT_ID": "", "STUDYPILOT_DEV_MODE": ""})
+        self.enterContext(patch("studypilot.ai.local_credentials", return_value={}))
+        self.enterContext(patch("studypilot.ai.model_ready", return_value=False))
         env.start()
         self.addCleanup(env.stop)
         self.auth = AuthStore(auth_root)
@@ -233,7 +235,8 @@ class AppTests(unittest.TestCase):
     def test_ai_goal_entry_explains_assistant_without_writing_goals(self):
         db = Database(self.db_path)
         db.save_profile(StudyProfile(goals="我的自主目标"), expected_version=0, confirmed=True)
-        with patch.dict(os.environ, {"ZHIPU_API_KEY": "test-only-secret-marker"}):
+        with patch.dict(os.environ, {"CLOUDFLARE_API_TOKEN": "test-only-secret-marker",
+                                    "CLOUDFLARE_ACCOUNT_ID": "a" * 32}):
             self.navigate("学习档案")
             self.assertTrue(any(expander.label == "AI 帮我制定目标" for expander in self.app.expander))
             self.assertTrue(any("请切换到“AI 助手”" in item.value for item in self.app.info))
@@ -265,7 +268,8 @@ class AppTests(unittest.TestCase):
         self.assertEqual(db.get_study_profile()[1], 0)
 
     def test_configured_key_is_never_displayed_or_called(self):
-        with patch.dict(os.environ, {"ZHIPU_API_KEY": "test-only-secret-marker"}):
+        with patch.dict(os.environ, {"CLOUDFLARE_API_TOKEN": "test-only-secret-marker",
+                                    "CLOUDFLARE_ACCOUNT_ID": "a" * 32}):
             self.app.run()
         self.assertTrue(any("AI 助手已开放" in item.value for item in self.app.info))
         visible_text = " ".join(item.value for collection in (self.app.info, self.app.markdown, self.app.caption) for item in collection)

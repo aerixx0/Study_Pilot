@@ -66,7 +66,7 @@ def login_gate(auth):
         elif mode == "注册账号":
             with st.form("registration_form", clear_on_submit=False):
                 username = st.text_input("用户名", max_chars=USERNAME_MAX_LENGTH, key="register_username", help="1–64 个字符，支持中文、字母、数字、空格和常用符号；首尾空格自动去除，英文不区分大小写。无需真实姓名。")
-                password = st.text_input("设置密码", type="password", max_chars=128, key="register_password", help="15–128 个字符，建议使用容易记住的长短语。")
+                password = st.text_input("设置密码", type="password", max_chars=128, key="register_password", help=f"{auth.minimum_password_length}–128 个字符。")
                 repeat = st.text_input("再次输入密码", type="password", max_chars=128, key="register_repeat")
                 confirmed = st.checkbox("我确认创建账号", key="register_confirm")
                 if st.form_submit_button("创建账号", type="primary", width="stretch"):
@@ -79,7 +79,7 @@ def login_gate(auth):
             with st.form("reset_form", clear_on_submit=False):
                 username = st.text_input("用户名", max_chars=USERNAME_MAX_LENGTH, key="reset_username")
                 code = st.text_input("恢复码", type="password", max_chars=128, key="reset_code")
-                password = st.text_input("新密码", type="password", max_chars=128, key="reset_password")
+                password = st.text_input("新密码", type="password", max_chars=128, key="reset_password", help=f"{auth.minimum_password_length}–128 个字符。")
                 repeat = st.text_input("再次输入新密码", type="password", max_chars=128, key="reset_repeat")
                 confirmed = st.checkbox("我确认重置密码并退出该账号的所有会话", key="reset_confirm")
                 if st.form_submit_button("重置密码", type="primary", width="stretch"):
@@ -127,7 +127,7 @@ def account_settings(auth, account):
     st.caption("密码更新后，所有旧会话与旧恢复码都会失效，请保存新的恢复码。")
     with st.form("change_password_form", clear_on_submit=False):
         current = st.text_input("当前密码", type="password", max_chars=128, key="change_current")
-        password = st.text_input("新密码", type="password", max_chars=128, key="change_password")
+        password = st.text_input("新密码", type="password", max_chars=128, key="change_password", help=f"{auth.minimum_password_length}–128 个字符。")
         repeat = st.text_input("再次输入新密码", type="password", max_chars=128, key="change_repeat")
         confirmed = st.checkbox("我确认修改密码并退出所有会话", key="change_confirm")
         if st.form_submit_button("更新密码", type="primary"):

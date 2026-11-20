@@ -6,7 +6,7 @@
 
 Plan a realistic study week, know your next task, and track the work you actually do.
 
-**[Open the website](https://study-pilot-olive.vercel.app/) · [Download for Windows](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.2/StudyPilot-Windows-v0.6.0-preview.2.zip) · [Release notes](https://github.com/aerixx0/Study_Pilot/releases/tag/v0.6.0-preview.2)**
+**[Open the website](https://study-pilot-olive.vercel.app/) · [Windows 安装与使用](Usage.md)**
 
 </div>
 
@@ -18,26 +18,28 @@ Plan a realistic study week, know your next task, and track the work you actuall
 
 No installation is required. Register an account and choose English or Simplified Chinese.
 
-### Download the Windows app
+### 安装 Windows 本地版 0.6.6
 
-**Local app support is currently Windows only. No macOS or Linux local packages are provided.**
+1. 双击 **StudyPilot-Windows-x64-Setup.exe**，按向导安装。支持 Windows 10/11 x64 每用户安装，可选创建桌面快捷方式。
+2. 在开始菜单打开 **StudyPilot**。服务就绪后，系统默认浏览器会打开本地页面。已有旧版账号可先导入旧数据，再用原密码登录。本地密码至少 6 个字符。
+3. 用开始菜单中的 **停止 StudyPilot** 结束服务。可从 Windows 设置卸载，学习数据会保留。
 
-The Windows package runs locally in your browser. It requires **Python 3.12 or later** and an internet connection for first-time dependency setup. The local Streamlit interface is currently Chinese. This is a source ZIP with a launcher, not a standalone EXE installer.
+从 [GitHub Releases 下载 Windows 0.6.6 安装包](https://github.com/aerixx0/Study_Pilot/releases/tag/v0.6.6)，同一页提供 SHA-256 校验文件。安装包包含 Python、依赖和 SQLite，可离线安装。业务数据默认保存在 `%LOCALAPPDATA%\StudyPilot`。
 
-**[Download StudyPilot for Windows (.zip)](https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.2/StudyPilot-Windows-v0.6.0-preview.2.zip)**
+[安装、CLI、备份和旧版数据导入](Usage.md) · [改动、测试及已知限制](docs/WINDOWS_INSTALLER.md)
 
-Or copy this single command into **Windows PowerShell** to download the ZIP to your **Desktop**:
+### 从源码启动本地版
+
+在 Windows 上安装 Python 3.12 或更新版本后，从仓库根目录运行：
 
 ```powershell
-$studyPilotZip = Join-Path ([Environment]::GetFolderPath('Desktop')) 'StudyPilot-Windows-v0.6.0-preview.2.zip'; Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/aerixx0/Study_Pilot/releases/download/v0.6.0-preview.2/StudyPilot-Windows-v0.6.0-preview.2.zip' -OutFile $studyPilotZip
+cd python-ai-agent-ai-agent-studypilot/outputs/StudyPilot
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[local]"
+.\.venv\Scripts\studypilot.exe start
 ```
 
-1. Install [Python 3.12+ for Windows](https://www.python.org/downloads/windows/). Enable **Add python.exe to PATH** if offered by the installer.
-2. Right-click the downloaded ZIP and choose **Extract All**.
-3. Open **`StudyPilot-Windows`** and double-click **`Start-StudyPilot.cmd`**. Keep its window open while dependencies install.
-4. The browser opens **[http://127.0.0.1:8501/](http://127.0.0.1:8501/)** when ready. Press **Ctrl+C** in the startup window to stop; double-click the launcher to reopen.
-
-[Detailed Windows instructions and troubleshooting](Usage.md)
+也可双击源码目录的 `Start-StudyPilot.cmd`。CLI 的常用命令是 `studypilot start`、`studypilot status`、`studypilot stop` 和 `studypilot --help`。源码和安装版默认共用同一用户数据目录。为开发测试设置 `STUDYPILOT_HOME` 可隔离数据和服务状态。
 
 ## What StudyPilot helps you do
 
@@ -98,7 +100,7 @@ Cloudflare is an overseas service. Its [Workers AI data policy](https://develope
 - **Web:** FastAPI with native HTML, CSS and JavaScript; no React, Next.js or frontend build step.
 - **Hosted storage:** PostgreSQL with per-account learning schemas and persistent sessions, plans, proposals and quotas.
 - **Local storage:** SQLite account databases under the application's `data/accounts/` directory.
-- **Local Windows interface:** Streamlit, launched by `Start-StudyPilot.cmd`.
+- **Local Windows interface:** Streamlit, launched by the installed shortcut or `studypilot start`.
 - **Protection:** scrypt password hashes, recovery codes, HTTP-only cookies, same-origin/CSRF checks, input validation and versioned writes.
 
 Web task/record forms use account-scoped `Idempotency-Key` receipts for retries; a write and its receipt commit or roll back together. Clients must reuse the same key for the same operation. A new action after refresh is not automatically treated as an old retry.
@@ -117,7 +119,7 @@ $env:STUDYPILOT_WEB_LOCAL = '1'
 .\.venv\Scripts\python.exe -m uvicorn studypilot.web:app --host 127.0.0.1 --port 8510
 ```
 
-Open **[http://127.0.0.1:8510/](http://127.0.0.1:8510/)** for the English/Chinese Web interface with local SQLite. The Windows download's normal launcher opens the separate Chinese Streamlit interface on port 8501.
+Open **[http://127.0.0.1:8510/](http://127.0.0.1:8510/)** for the English/Chinese Web interface with local SQLite. The Windows installer's normal launcher opens the separate Chinese Streamlit interface, starting at port 8501.
 
 ### Environment variables
 
@@ -172,11 +174,17 @@ node --check public/study.js
 
 Models are mocked in automated tests. PostgreSQL cases run only when `STUDYPILOT_TEST_POSTGRES` points at an independent localhost test database; otherwise they skip. CI runs Python tests/compilation and JavaScript checks. There is no configured bundler or separate type-check command. [Audit](docs/PHASE0_AUDIT.md) · [Phase 1 report](docs/PHASE1_REPORT.md) · [This release's validation](docs/RELEASE_PREVIEW_2.md).
 
-Maintainers can build the Windows source ZIP from a committed revision using `python scripts/build_windows_release.py --ref HEAD --output verification/StudyPilot-Windows.zip`. The builder packages tracked source and a startup guide, excluding local data and runtime files.
+Build the offline installer on Windows with Python 3.12+ and Inno Setup 6.7.3.
+
+```powershell
+python scripts/build_windows_installer.py --iscc 'C:\Path\To\ISCC.exe'
+```
+
+The builder verifies the embedded CPython archive and packages pinned Windows wheels and local app files. For installer prerequisites and verification see [Windows installer notes](docs/WINDOWS_INSTALLER.md). The older source ZIP builder remains available for source releases.
 
 ## Known limits and roadmap
 
-- This is a preview. The local distribution is **Windows only**, requires Python, and has no standalone EXE installer.
+- The local installer targets 64-bit Windows 10/11. The bundled Streamlit interface is in Simplified Chinese. The installer currently has no Authenticode signature.
 - Plans have day-level sessions, not exact calendar start/end times. They do not automatically rebuild after a missed day or changed inputs.
 - Actual study time is not proof of mastery. Tasks currently have three statuses and notes, without structured partial completion or plan undo.
 - Changing language does not translate existing user writing. Chat/drafts do not survive refresh; local and hosted installations do not synchronize.

@@ -13,3 +13,11 @@ node_modules/
 .runtime/
 verification/
 logs/
+*.egg-info/
+
+# Files from installing StudyPilot over this checkout on Windows.
+/app/
+/bin/
+/runtime/
+/unins*.dat
+/unins*.exe

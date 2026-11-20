@@ -2,6 +2,7 @@
 
 from datetime import date, timedelta
 from html import escape
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -9,10 +10,11 @@ import sqlite3
 import streamlit as st
 
 from studypilot.database import ConfirmationRequired, ConflictError, Database
-from studypilot.auth import AuthStore, AuthError
+from studypilot.auth import AuthError, LocalAuthStore
 from studypilot.auth_ui import login_gate, account_bar, account_settings
 from studypilot.schedule_ui import schedule_page
 from studypilot.agent_ui import agent_page
+from studypilot.desktop_conversation import conversation_link
 from studypilot.ai import ai_configured
 from studypilot.models import DAYS, DEVICES, LEVELS, PRIORITIES, SPEEDS, STATUSES, SUBJECTS, StudyProfile, TaskInput, ValidationError
 from studypilot.progress import get_progress
@@ -265,7 +267,7 @@ def main():
     masthead()
     legacy_path = Path(os.getenv("STUDYPILOT_DB") or ROOT / "data" / "studypilot.db")
     try:
-        auth = AuthStore(os.getenv("STUDYPILOT_AUTH_DIR") or legacy_path.parent / "accounts")
+        auth = LocalAuthStore(os.getenv("STUDYPILOT_AUTH_DIR") or legacy_path.parent / "accounts")
         with st.container(key="auth-shell"):
             account = login_gate(auth)
     except (sqlite3.Error, OSError, ValidationError):
@@ -302,7 +304,13 @@ def main():
             elif page == "账号设置":
                 account_settings(auth, account)
             elif page == "AI 助手":
-                agent_page(auth, account)
+                link = conversation_link(st.session_state.get("auth_token"))
+                if link:
+                    st.link_button("打开网页版对话", link)
+                    st.html(f"<script>window.location.assign({json.dumps(link)});</script>",
+                            unsafe_allow_javascript=True)
+                else:
+                    agent_page(auth)
             elif page == "开发进度" and developer_mode:
                 page_intro("DEV", "功能与维护", "查看已启用功能与后续维护事项。此页面仅对开发者开放。", "PRODUCT STATUS")
                 st.write("✅ 学习管理：档案、任务、完成状态、学习记录和进度统计。")
@@ -319,7 +327,10 @@ def main():
         else:
             st.error("暂时无法读取学习数据，请稍后重试。若问题持续，请联系维护人员。")
         st.stop()
-    ai_enabled = ai_configured()
+    if page == "AI 助手":
+        return
+
+    ai_enabled = ai_configured(local=True)
     footer(ai_enabled)
     with st.expander("使用说明"):
         if ai_enabled:

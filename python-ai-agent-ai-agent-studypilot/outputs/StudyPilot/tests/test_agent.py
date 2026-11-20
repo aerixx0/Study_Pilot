@@ -317,6 +317,8 @@ class AgentUITests(unittest.TestCase):
         env = patch.dict(os.environ, {"STUDYPILOT_AUTH_DIR": str(Path(self.temp.name)/'accounts'),
             "STUDYPILOT_DB": str(Path(self.temp.name)/'legacy.db'), "ZHIPU_API_KEY": "", "SILICONFLOW_API_KEY": "", "CLOUDFLARE_API_TOKEN": "", "CLOUDFLARE_ACCOUNT_ID": ""})
         env.start(); self.addCleanup(env.stop)
+        self.enterContext(patch('studypilot.ai.local_credentials', return_value={}))
+        self.enterContext(patch('studypilot.ai.model_ready', return_value=False))
         self.auth = AuthStore(Path(self.temp.name)/'accounts')
         self.auth.register("learner", PASSWORD, confirmed=True)
         self.token = self.auth.login("learner", PASSWORD)
@@ -331,7 +333,7 @@ class AgentUITests(unittest.TestCase):
         self.assertEqual(len(self.app.exception), 0)
 
     def test_no_key_disables_network_and_still_allows_pending_review(self):
-        self.assertTrue(next(button for button in self.app.button if button.label == '发送给学习助手').disabled)
+        self.assertTrue(next(button for button in self.app.button if button.label == '发送').disabled)
         task = asdict(TaskInput('未配置 Key 也可确认已有提案','Python',date.today().isoformat()))
         proposal_id = stage_proposal(self.auth,self.token,'create_task',{'task':task},'测试已有提案',request_id='r',call_id='c')
         self.app.run(); self.click('确认执行')
@@ -339,16 +341,55 @@ class AgentUITests(unittest.TestCase):
         self.app.checkbox(key='approve_'+proposal_id).check(); self.click('确认执行')
         self.assertEqual(len(self.db.get_tasks()),1)
 
+    def test_quick_prompt_and_new_conversation(self):
+        self.click("梳理学习目标")
+        self.assertIn("梳理学习目标", self.app.text_area(key="agent_prompt").value)
+        self.assertEqual(self.app.selectbox(key="agent_mode").value, "goal_coach")
+        self.assertFalse(self.app.checkbox(key="agent_consent").value)
+        task = asdict(TaskInput("保留已有提案", "Python", date.today().isoformat()))
+        proposal_id = stage_proposal(self.auth, self.token, "create_task", {"task": task},
+                                     "已有提案", request_id="new-chat", call_id="create")
+        self.app.session_state["agent_history"] = [{"role": "user", "content": "上一轮"},
+                                                   {"role": "assistant", "content": "上一轮答复"}]
+        self.app.run()
+        self.assertEqual(len(self.app.chat_message), 2)
+        self.click("新建对话")
+        self.assertEqual(len(self.app.chat_message), 0)
+        self.assertEqual(self.app.text_area(key="agent_prompt").value, "")
+        self.assertEqual(self.app.selectbox(key="agent_mode").value, "chat")
+        self.assertFalse(self.app.checkbox(key="approve_" + proposal_id).value)
+        self.assertEqual(self.db.get_tasks(), [])
+
+    def test_failed_reply_keeps_draft_and_displays_staged_proposal(self):
+        task = asdict(TaskInput("需要核对的提案", "Python", date.today().isoformat()))
+
+        def fail_after_proposal(auth, token, prompt, **kwargs):
+            stage_proposal(auth, token, "create_task", {"task": task}, "测试建议",
+                           request_id="failed-reply", call_id="create")
+            raise AIError("测试模型连接中断")
+
+        with patch("studypilot.ai.model_ready", return_value=True), \
+                patch("studypilot.agent_ui.run_agent", side_effect=fail_after_proposal):
+            self.app.run()
+            self.app.text_area(key="agent_prompt").set_value("帮我制定学习任务")
+            self.app.checkbox(key="agent_consent").check()
+            self.click("发送")
+        self.assertEqual(self.app.text_area(key="agent_prompt").value, "帮我制定学习任务")
+        self.assertTrue(any("问题已保留" in error.value for error in self.app.error))
+        self.assertTrue(any(button.label == "确认执行" for button in self.app.button))
+        self.assertEqual(self.db.get_tasks(), [])
+
     def test_question_consent_proposal_confirmation_and_draft_retention(self):
         task = asdict(TaskInput('模型建议任务','数学',date.today().isoformat()))
         fake = FakeResponses(completed(call('propose_task_create',dict(task=task,reason='用户请求'))),answer())
-        with patch.dict(os.environ,{'ZHIPU_API_KEY':'test-not-sent'}), patch('studypilot.agent_ui.run_agent',side_effect=lambda *args,**kwargs: run_agent(*args,**kwargs,transport=fake)):
+        with patch("studypilot.ai.model_ready", return_value=True), patch('studypilot.agent_ui.run_agent',side_effect=lambda *args,**kwargs: run_agent(*args,**kwargs,transport=fake)):
             self.app.run(); self.app.text_area(key='agent_prompt').set_value('帮我新增任务')
-            self.click('发送给学习助手')
+            self.click('发送')
             self.assertEqual(self.app.text_area(key='agent_prompt').value,'帮我新增任务')
             self.assertEqual(fake.requests,[])
-            self.app.checkbox(key='agent_consent').check(); self.click('发送给学习助手')
+            self.app.checkbox(key='agent_consent').check(); self.click('发送')
             self.assertEqual(self.app.text_area(key='agent_prompt').value,'')
+            self.assertFalse(self.app.checkbox(key='agent_consent').value)
             self.assertEqual(self.db.get_tasks(),[])
             self.assertEqual(len(list_proposals(self.auth,self.token)),1)
             self.click('忽略提案')
