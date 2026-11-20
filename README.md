@@ -6,9 +6,11 @@
 
 Plan a realistic study week, know your next task, and track the work you actually do.
 
-**[Open the website](https://study-pilot-olive.vercel.app/) · [Windows 安装与使用](Usage.md)**
+**[Open the website](https://study-pilot-olive.vercel.app/) · [Windows installation and usage](Usage.md)**
 
 </div>
+
+![StudyPilot's dark-mode dashboard showing weekly progress and study availability.](docs/screenshots/overview-dark.png)
 
 ## Start here
 
@@ -18,19 +20,19 @@ Plan a realistic study week, know your next task, and track the work you actuall
 
 No installation is required. Register an account and choose English or Simplified Chinese.
 
-### 安装 Windows 本地版 0.6.6
+### Install the Windows app (0.6.6)
 
-1. 双击 **StudyPilot-Windows-x64-Setup.exe**，按向导安装。支持 Windows 10/11 x64 每用户安装，可选创建桌面快捷方式。
-2. 在开始菜单打开 **StudyPilot**。服务就绪后，系统默认浏览器会打开本地页面。已有旧版账号可先导入旧数据，再用原密码登录。本地密码至少 6 个字符。
-3. 用开始菜单中的 **停止 StudyPilot** 结束服务。可从 Windows 设置卸载，学习数据会保留。
+1. Double-click **StudyPilot-Windows-x64-Setup.exe** and follow the setup wizard. The installer supports per-user installation on Windows 10 and 11 (x64). A desktop shortcut is optional.
+2. Open **StudyPilot** from the Start menu. The local app opens in your default browser when it is ready. If you have an account from a previous installation, import your old data first and sign in with your existing password. Local passwords must be at least six characters long.
+3. Use the StudyPilot stop shortcut in the Start menu to stop the service. You can uninstall the app from Windows Settings and keep your study data.
 
-从 [GitHub Releases 下载 Windows 0.6.6 安装包](https://github.com/aerixx0/Study_Pilot/releases/tag/v0.6.6)，同一页提供 SHA-256 校验文件。安装包包含 Python、依赖和 SQLite，可离线安装。业务数据默认保存在 `%LOCALAPPDATA%\StudyPilot`。
+The installer includes Python, dependencies, and SQLite for offline installation. StudyPilot stores local data in `%LOCALAPPDATA%\StudyPilot` by default. Get the installer and its SHA-256 checksum from [GitHub Releases](https://github.com/aerixx0/Study_Pilot/releases/tag/v0.6.6).
 
-[安装、CLI、备份和旧版数据导入](Usage.md) · [改动、测试及已知限制](docs/WINDOWS_INSTALLER.md)
+[Installation, CLI, backups, and legacy data import](Usage.md) · [Changes, testing, and known limitations](docs/WINDOWS_INSTALLER.md)
 
-### 从源码启动本地版
+### Run the local app from source
 
-在 Windows 上安装 Python 3.12 或更新版本后，从仓库根目录运行：
+Install Python 3.12 or later on Windows and run these commands from the repository root.
 
 ```powershell
 cd python-ai-agent-ai-agent-studypilot/outputs/StudyPilot
@@ -39,7 +41,7 @@ py -3 -m venv .venv
 .\.venv\Scripts\studypilot.exe start
 ```
 
-也可双击源码目录的 `Start-StudyPilot.cmd`。CLI 的常用命令是 `studypilot start`、`studypilot status`、`studypilot stop` 和 `studypilot --help`。源码和安装版默认共用同一用户数据目录。为开发测试设置 `STUDYPILOT_HOME` 可隔离数据和服务状态。
+You can also double-click `Start-StudyPilot.cmd` in the application directory. Common CLI commands are `studypilot start`, `studypilot status`, `studypilot stop`, and `studypilot --help`. The source and installed versions share the same user data directory by default. Set `STUDYPILOT_HOME` to isolate data and service state during development and testing.
 
 ## What StudyPilot helps you do
 
