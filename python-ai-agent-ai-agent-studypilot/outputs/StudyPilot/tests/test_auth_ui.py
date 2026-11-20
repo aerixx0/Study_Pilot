@@ -13,6 +13,9 @@ from studypilot.models import StudyProfile
 from tests.test_auth import PASSWORD, NEW_PASSWORD
 
 
+SIX_CHARACTER_PASSWORD = "Ab23cd"
+
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -67,7 +70,10 @@ class AuthUITests(unittest.TestCase):
                 self.assertTrue(any(error in item.value for item in self.app.error))
                 self.assert_preserved_form("registration_form", values)
         self.app.text_input(key="register_username").set_value("新同学")
+        self.app.text_input(key="register_password").set_value(SIX_CHARACTER_PASSWORD)
+        self.app.text_input(key="register_repeat").set_value(SIX_CHARACTER_PASSWORD)
         self.click("创建账号")
+        self.assertTrue(self.auth.login("新同学", SIX_CHARACTER_PASSWORD))
         self.assertEqual(self.app.session_state["recovery_receipt"]["username"], "新同学")
         for key in values:
             self.assertNotIn(key, self.app.session_state)
@@ -101,8 +107,11 @@ class AuthUITests(unittest.TestCase):
             self.click("重置密码")
             self.assertTrue(self.app.error)
             self.assert_preserved_form("reset_form", values)
+        self.app.text_input(key="reset_password").set_value(SIX_CHARACTER_PASSWORD)
+        self.app.text_input(key="reset_repeat").set_value(SIX_CHARACTER_PASSWORD)
         self.app.checkbox(key="reset_confirm").check()
         self.click("重置密码")
+        self.assertTrue(self.auth.login("student", SIX_CHARACTER_PASSWORD))
         self.assertTrue(self.app.session_state["recovery_receipt"]["code"])
         for key in values:
             self.assertNotIn(key, self.app.session_state)
@@ -127,8 +136,11 @@ class AuthUITests(unittest.TestCase):
             self.click("更新密码")
             self.assertTrue(self.app.error)
             self.assert_preserved_form("change_password_form", values)
+        self.app.text_input(key="change_password").set_value(SIX_CHARACTER_PASSWORD)
+        self.app.text_input(key="change_repeat").set_value(SIX_CHARACTER_PASSWORD)
         self.app.checkbox(key="change_confirm").check()
         self.click("更新密码")
+        self.assertTrue(self.auth.login("student", SIX_CHARACTER_PASSWORD))
         self.assertTrue(self.app.session_state["recovery_receipt"]["code"])
         for key in values:
             self.assertNotIn(key, self.app.session_state)

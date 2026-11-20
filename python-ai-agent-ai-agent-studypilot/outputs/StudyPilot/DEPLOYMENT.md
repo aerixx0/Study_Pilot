@@ -22,10 +22,9 @@
 | 变量 | 用途 |
 |---|---|
 | DATABASE_URL | 必需，PostgreSQL 连接串；也兼容 POSTGRES_URL |
-| ZHIPU_API_KEY | 可选，主模型智谱 GLM-4.7-Flash 的密钥 |
-| CLOUDFLARE_ACCOUNT_ID | 可选，Cloudflare 账号 ID，32 位十六进制，须与 Token 同时配置 |
-| CLOUDFLARE_API_TOKEN | 可选，Cloudflare Workers AI Token，使用 Workers Free 免费套餐 |
-| SILICONFLOW_API_KEY | 可选，备用模型硅基流动 Xing4.0-29B 的密钥 |
+| STUDYPILOT_SHARED_AI | 设为 `1` 启用网页版和 Windows 版共用的 Qwen 3.8 27B 与 GPT-OSS 20B |
+| CLOUDFLARE_ACCOUNT_ID | 启用共享 AI 时必需，使用 32 位十六进制账号 ID |
+| CLOUDFLARE_API_TOKEN | 启用共享 AI 时必需，在 Vercel 生产环境保存为 Secret，使用 Workers Free 套餐 |
 | STUDYPILOT_AI_USER_LIMIT、STUDYPILOT_AI_WINDOW_SECONDS、STUDYPILOT_AI_SITE_LIMIT | 可选，免费额度保护；默认 15 次 / 账号 / 10 分钟、400 次 / 全站 / UTC 日 |
 
 建议使用数据库提供方的池化 URL，保留提供方要求的 TLS 参数，例如 sslmode=require。生产、预览和开发环境应使用独立数据库或数据库分支；不要把生产连接复制给不受信任的预览部署。没有配置数据库时页面会明确提示，绝不回退到 /tmp SQLite。
@@ -42,7 +41,7 @@
 2. 实际注册、登录，再保存一项明确标记的测试任务；重新加载后仍可读取，才能验证持久化。
 3. 另一个账号应看不到该任务和提案。普通账号不显示开发进度，直接请求 /api/development 返回 403。
 4. 未勾选确认不能创建任务或执行提案；重复执行同一提案返回同一收据。
-5. 未配置 ZHIPU_API_KEY 且未配置 SILICONFLOW_API_KEY 时 AI 发送按钮禁用；配一个即可用，两个都配才有自动切换。不能把网站上线当作真实模型调用已验证。
+5. 开启共享 AI 后，在网页中分别选择 Qwen 与 GPT-OSS，发送同意后的测试消息。用测试账号生成 Windows 连接码，再通过桌面版验证两个模型和重复使用连接码被拒绝的行为。
 
 本地旧账号和学习库不会随源码上传，也不会自动迁移到云端。云端是独立实例；已有本地数据原样保留。导出的学习 JSON 不包含凭据，当前不支持一键恢复；生产备份应使用 PostgreSQL 提供方的备份与导出能力。
 

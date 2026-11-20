@@ -59,7 +59,7 @@ export default function ({ parentElement, data }) {
 // One controller per document, including after Streamlit remounts the masthead.
 // It observes only rendered UI; it never reads or writes account/form state.
 function installMotion() {
-  const version = "motion-6";
+  const version = "motion-7";
   if (window.__pilotMotion?.version === version) return;
   window.__pilotMotion?.dispose();
   const root = document.documentElement;
@@ -69,9 +69,58 @@ function installMotion() {
   const pageSelector = '[class*="st-key-page-content-"]';
   let current = null, currentId = null, pending = null;
   let frame = 0, nav = null, capsule = null, navResize = null;
-  let capsuleSelection = null;
+  let capsuleSelection = null, railMotions = 0;
   const animations = new Set();
   root.dataset.pilotMotion = version;
+
+  const compact = window.matchMedia('(max-width: 760px)');
+  const menu = document.createElement('button');
+  menu.type = 'button';
+  menu.className = 'pilot-workspace-menu';
+  menu.textContent = '☰';
+  menu.setAttribute('aria-label', '学习导航');
+  menu.setAttribute('aria-expanded', 'false');
+  document.body.appendChild(menu);
+
+  function toggleMenu(open) {
+    if (open) root.dataset.pilotSidebarOpen = 'true';
+    else delete root.dataset.pilotSidebarOpen;
+    menu.setAttribute('aria-expanded', String(open));
+  }
+  menu.addEventListener('click', () => toggleMenu(root.dataset.pilotSidebarOpen !== 'true'));
+  const closeMenuOnEscape = event => {
+    if (event.key === 'Escape' && root.dataset.pilotSidebarOpen) {
+      toggleMenu(false);
+      menu.focus();
+    }
+  };
+
+  function switchWorkspace(id, animate = false) {
+    const next = id === 'page-6' ? 'conversation' : 'learning';
+    if (root.dataset.pilotWorkspace === next) return;
+    const labels = [...app.querySelectorAll('.st-key-top-navigation label')];
+    const before = animate && !reduced.matches && !compact.matches
+      ? labels.map(label => label.getBoundingClientRect()) : null;
+    toggleMenu(false);
+    root.dataset.pilotWorkspace = next;
+    positionCapsule();
+    if (before) labels.forEach((label, index) => {
+      const after = label.getBoundingClientRect();
+      const dx = before[index].left - after.left;
+      const dy = before[index].top - after.top;
+      if (Math.abs(dx) + Math.abs(dy) < 2) return;
+      const motion = label.animate([
+        {transform: 'translate3d(' + dx + 'px,' + dy + 'px,0)'},
+        {transform: 'translate3d(0,0,0)'},
+      ], {duration: 430, easing: 'cubic-bezier(.16,1,.3,1)'});
+      animations.add(motion);
+      railMotions++;
+      motion.finished.catch(() => {}).finally(() => {
+        animations.delete(motion);
+        if (!--railMotions) positionCapsule();
+      });
+    });
+  }
 
   function renderedPage() {
     const pages = [...app.querySelectorAll(pageSelector)];
@@ -88,6 +137,7 @@ function installMotion() {
     });
     current = view.node;
     currentId = view.id;
+    switchWorkspace(currentId, animate);
     current.classList.add('pilot-current-page');
     if (animate && !reduced.matches) {
       const animation = current.animate([
@@ -103,6 +153,7 @@ function installMotion() {
   }
 
   function positionCapsule() {
+    if (railMotions) return;
     const group = document.querySelector('.st-key-top-navigation [role="radiogroup"]');
     if (!group) {
       navResize?.disconnect(); navResize = null; nav = null; capsule = null; capsuleSelection = null;
@@ -185,10 +236,11 @@ function installMotion() {
     pending = request;
     root.dataset.pilotLastNavigation = id;
     root.dataset.pilotNavigation = 'pending';
+    switchWorkspace(id, true);
     positionCapsule();
     // A slow/failed backend must never leave a frozen overlay or locked controls.
     request.timer = setTimeout(() => {
-      if (pending === request) { cancelPending(); queueScan(); }
+      if (pending === request) { cancelPending(); switchWorkspace(renderedPage()?.id ?? currentId); queueScan(); }
     }, 1800);
     // A local inert snapshot keeps the header and navigation fully interactive.
     // Native view transitions can suppress input during their update callback.
@@ -252,6 +304,7 @@ function installMotion() {
     const label = event.target.closest('.st-key-top-navigation label,.st-key-auth_mode label');
     const input = label?.querySelector('input[type="radio"]');
     if (input) {
+      if (label.closest('.st-key-top-navigation')) toggleMenu(false);
       begin(`${label.closest('.st-key-top-navigation') ? 'page' : 'auth'}-${input.value}`);
       return;
     }
@@ -274,6 +327,7 @@ function installMotion() {
   function onReducedMotion() {
     if (reduced.matches) {
       cancelPending();
+      switchWorkspace(renderedPage()?.id ?? currentId);
       animations.forEach(animation => animation.cancel());
     }
   }
@@ -288,6 +342,7 @@ function installMotion() {
   document.addEventListener('change', onChange, true);
   document.addEventListener('click', onClick, true);
   document.addEventListener('keydown', onKeydown, true);
+  document.addEventListener('keydown', closeMenuOnEscape);
   reduced.addEventListener('change', onReducedMotion);
   window.__pilotMotion = {version, dispose() {
     cancelPending();
@@ -298,6 +353,10 @@ function installMotion() {
     document.removeEventListener('change', onChange, true);
     document.removeEventListener('click', onClick, true);
     document.removeEventListener('keydown', onKeydown, true);
+    document.removeEventListener('keydown', closeMenuOnEscape);
+    menu.remove();
+    toggleMenu(false);
+    delete root.dataset.pilotWorkspace;
     reduced.removeEventListener('change', onReducedMotion);
     delete root.dataset.pilotMotion;
   }};

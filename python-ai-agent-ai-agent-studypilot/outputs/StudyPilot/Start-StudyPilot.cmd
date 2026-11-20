@@ -24,10 +24,10 @@ if not errorlevel 1 goto launch
 "%STUDYPILOT_PYTHON%" -m pip install -r requirements-local.txt
 if errorlevel 1 goto failed
 :launch
-"%STUDYPILOT_PYTHON%" start_studypilot.py
+"%STUDYPILOT_PYTHON%" start_studypilot.py start
 if errorlevel 1 goto failed
 exit /b 0
 :failed
-echo Could not start StudyPilot. Install Python 3.12+ and check the messages above.
+echo Could not start StudyPilot. Check the message above and the user log.
 pause
 exit /b 1

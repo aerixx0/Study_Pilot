@@ -42,7 +42,7 @@ class AIMeter:
             "site_limit": setting("STUDYPILOT_AI_SITE_LIMIT", SITE_LIMIT, 1, 100000),
         }
 
-    def reserve(self, token, *, now=None):
+    def reserve(self, token, *, now=None, desktop_relay=False):
         """在事务内记一次用量；超过账号窗口或全站当日额度就抛 QuotaExceeded。"""
         limits = self.limits()
         now = time.time() if now is None else now
@@ -50,7 +50,11 @@ class AIMeter:
         day = datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%d")
         with self.store.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            account = self.store._active_account(conn, token)
+            if desktop_relay:
+                from .relay import active_account
+                account = active_account(conn, token)
+            else:
+                account = self.store._active_account(conn, token)
             conn.execute("DELETE FROM ai_usage WHERE window_start < ?", (window - 1,))
             conn.execute("DELETE FROM ai_site_usage WHERE day < ?", (day,))
             row = conn.execute("SELECT used FROM ai_usage WHERE account_id=? AND window_start=?",

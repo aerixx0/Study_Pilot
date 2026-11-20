@@ -5,7 +5,7 @@ Base URL、模型或服务商，因此不会因为配置漂移而切到收费模
 OpenAI 兼容的 /chat/completions，这里把内部使用的 Responses 形状
 （instructions/input/tools → output）与对话形状互相转换，调用方不需要改动。
 
-新增服务只能在此文件中显式写入常量；密钥只从服务端环境变量读取，
+服务商在此文件中固定；云端凭据来自环境变量，本地也可使用 Windows 凭据管理器。
 日志只记录服务商、模型、耗时、错误类型，不记录提示词、用户资料或密钥。
 """
 
@@ -20,7 +20,9 @@ import socket
 import time
 from email.utils import parsedate_to_datetime
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+
+from .local_inference import BASE_URL as LOCAL_MODEL_URL, MODEL as LOCAL_MODEL_ID, model_ready
 
 
 CHAT_PATH = "/chat/completions"
@@ -61,8 +63,28 @@ CLOUDFLARE = Provider("cloudflare", "Cloudflare GLM-4.7-Flash",
                       "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
                       "@cf/zai-org/glm-4.7-flash", "CLOUDFLARE_API_TOKEN")
 PROVIDERS = (PRIMARY, CLOUDFLARE, BACKUP)
+LOCAL_QWEN = Provider("llamacpp", "本机 Qwen3.5-4B", LOCAL_MODEL_URL, LOCAL_MODEL_ID, "")
+LOCAL_CLOUDFLARE = Provider("cloudflare", "Cloudflare GPT-OSS 20B", CLOUDFLARE.base_url,
+                            "@cf/openai/gpt-oss-20b", CLOUDFLARE.key_env)
+LOCAL_PROVIDERS = (LOCAL_QWEN, LOCAL_CLOUDFLARE)
+CLOUD_QWEN = Provider("cloudflare-qwen", "Cloudflare Qwen 3.8 27B", CLOUDFLARE.base_url,
+                      "@cf/qwen/qwen3.8-27b", CLOUDFLARE.key_env)
+SHARED_PROVIDERS = {"qwen": CLOUD_QWEN, "gpt-oss": LOCAL_CLOUDFLARE}
+RELAY_ORIGIN = "https://study-pilot-olive.vercel.app"
+RELAY_PROVIDERS = {
+    family: Provider("relay-" + family, provider.label, RELAY_ORIGIN, provider.model, "")
+    for family, provider in SHARED_PROVIDERS.items()
+}
 MAX_PROVIDERS = 2
 DEFAULT_MODEL = PRIMARY.model
+
+
+def shared_ai():
+    return os.getenv("STUDYPILOT_SHARED_AI") == "1"
+
+
+def cloudflare_provider(provider):
+    return provider.base_url == CLOUDFLARE.base_url
 
 KIND_TEXT = {
     "rate_limit": "限流", "timeout": "超时", "network": "连接失败", "server_error": "服务端错误",
@@ -115,7 +137,7 @@ def upstream_failure(provider, data, status=None, retry_after=None):
     kind = kind_for_status(status) if status is not None else "request"
     if provider == PRIMARY and status in (None, 429):
         kind = ZHIPU_ERRORS.get(code, "rate_limit" if code == "429" else kind)
-    elif provider == CLOUDFLARE:
+    elif cloudflare_provider(provider):
         errors = data.get("errors") if isinstance(data, dict) else None
         first = errors[0] if isinstance(errors, list) and errors else error
         code = str(first.get("code")) if isinstance(first, dict) else None
@@ -127,48 +149,69 @@ def upstream_failure(provider, data, status=None, retry_after=None):
     else:
         code = None
     return ProviderFailure(kind, "模型服务返回错误。", status=status,
-                           code=code if provider in (PRIMARY, CLOUDFLARE) else None, retry_after=retry_after)
+                           code=code if provider == PRIMARY or cloudflare_provider(provider) else None, retry_after=retry_after)
 
 
-def cloudflare_account_id():
-    value = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+def local_credentials(local):
+    if not local:
+        return {}
+    from .windows_credentials import read_credentials
+    return read_credentials()
+
+
+def credential(name, credentials=None):
+    return ((os.getenv(name) or (credentials or {}).get(name, "")) if name else "").strip()
+
+
+def cloudflare_account_id(credentials=None):
+    value = credential("CLOUDFLARE_ACCOUNT_ID", credentials)
     return value if re.fullmatch(r"[a-fA-F0-9]{32}", value) else ""
 
 
-def provider_url(provider):
-    if provider == CLOUDFLARE:
-        account_id = cloudflare_account_id()
+def provider_url(provider, credentials=None):
+    if cloudflare_provider(provider):
+        account_id = cloudflare_account_id(credentials)
         if not account_id:
             raise AIError("Cloudflare 账号 ID 未配置或格式无效，请联系维护人员。")
         return provider.base_url.format(account_id=account_id) + CHAT_PATH
     return provider.base_url + CHAT_PATH
 
 
-def provider_key(provider, keys=None):
-    if provider == CLOUDFLARE and not cloudflare_account_id():
+def provider_key(provider, keys=None, credentials=None):
+    if cloudflare_provider(provider) and not cloudflare_account_id(credentials):
         return ""
-    value = (keys or {}).get(provider.name) if keys else None
+    value = (keys or {}).get(provider.name)
     if value is None:
-        value = os.getenv(provider.key_env, "")
+        return credential(provider.key_env, credentials)
     return value.strip() if isinstance(value, str) else ""
 
 
-def ai_configured(keys=None):
-    """至少配置了一家免费服务的密钥时才允许联网。"""
-    return os.getenv("STUDYPILOT_AI_ENABLED", "1") == "1" and any(provider_key(provider, keys) for provider in PROVIDERS)
+def ai_configured(keys=None, *, local=False):
+    return os.getenv("STUDYPILOT_AI_ENABLED", "1") == "1" and bool(configured_providers(keys, local=local))
 
 
-def configured_providers(keys=None):
-    # Freeze the same pair for every tool round; never reach a third provider.
-    return tuple(provider for provider in PROVIDERS if provider_key(provider, keys))[:MAX_PROVIDERS]
+def configured_providers(keys=None, *, local=False, credentials=None, relay_token=None, family=None):
+    if credentials is None:
+        credentials = local_credentials(local)
+    if local:
+        qwen = LOCAL_QWEN if model_ready() else RELAY_PROVIDERS.get("qwen") if relay_token else None
+        gpt = LOCAL_CLOUDFLARE if provider_key(LOCAL_CLOUDFLARE, keys, credentials) else RELAY_PROVIDERS.get("gpt-oss") if relay_token else None
+        choices = {"qwen": qwen, "gpt-oss": gpt}
+        return tuple(p for name, p in choices.items() if p and (family is None or family == name))
+    if shared_ai():
+        return tuple(p for name, p in SHARED_PROVIDERS.items()
+                     if (family is None or family == name) and provider_key(p, keys, credentials))
+    return tuple(p for p in PROVIDERS if provider_key(p, keys, credentials))[:MAX_PROVIDERS]
 
 
-def provider_status():
-    """Developer diagnostics contain booleans only, never credential fragments."""
-    return [dict(name=p.name, label=p.label, model=p.model, configured=bool(provider_key(p)),
-                 token_configured=bool(os.getenv(p.key_env, "").strip()),
-                 account_configured=bool(cloudflare_account_id()) if p == CLOUDFLARE else None)
-            for p in PROVIDERS]
+def provider_status(*, local=False):
+    credentials = local_credentials(local)
+    choices = LOCAL_PROVIDERS if local else tuple(SHARED_PROVIDERS.values()) if shared_ai() else PROVIDERS
+    return [dict(name=p.name, label=p.label, model=p.model,
+                 configured=model_ready() if p == LOCAL_QWEN else bool(provider_key(p, credentials=credentials)),
+                 token_configured=bool(credential(p.key_env, credentials)),
+                 account_configured=bool(cloudflare_account_id(credentials)) if cloudflare_provider(p) else None)
+            for p in choices]
 
 
 def text_of(value):
@@ -258,6 +301,10 @@ def chat_payload(provider, payload):
             "max_tokens": maximum, "stream": False}
     if provider == PRIMARY:
         body["thinking"] = {"type": "disabled"}
+    elif provider == LOCAL_QWEN:
+        body["chat_template_kwargs"] = {"enable_thinking": False}
+    elif provider in SHARED_PROVIDERS.values():
+        body["reasoning_effort"] = "low"
     tools = chat_tools(payload.get("tools"))
     if tools:
         body["tools"] = tools
@@ -321,26 +368,35 @@ class FreeChatTransport:
     """按优先级选择已配置的两家免费服务；整次对话不访问第三家。
 
     请求是非流式的，整段响应拿到后才向界面输出；因此不存在“流式输出已开始后
-    切换模型”的情况。keys/opener/clock 只供测试注入，正常运行时全部来自环境变量和标准库。
+    切换模型”的情况。keys/opener/clock 只供测试注入，正常运行时使用受信任的服务端配置。
     """
 
-    def __init__(self, keys=None, opener=None, clock=time.monotonic, sleeper=time.sleep):
+    def __init__(self, keys=None, opener=None, clock=time.monotonic, sleeper=time.sleep, *, local=False,
+                 relay_token=None, family=None):
+        self._local = local
+        self._credentials = local_credentials(local)
         self._keys = dict(keys or {})
         self._opener = opener or build_opener(_NoRedirect())
+        self._loopback_opener = opener or build_opener(ProxyHandler({}), _NoRedirect())
         self._clock = clock
         self._sleep = sleeper
         self._failed = set()
         self._rate_retry_used = False
         self._selected = None
+        self._relay_token = relay_token
+        self._family = family
 
     def key(self, provider):
-        return provider_key(provider, self._keys)
+        if provider in RELAY_PROVIDERS.values():
+            return self._relay_token
+        return provider_key(provider, self._keys, self._credentials)
 
     def available(self):
         if os.getenv("STUDYPILOT_AI_ENABLED", "1") != "1":
             raise AIError("AI 助手已暂停服务，请稍后重试。")
         if self._selected is None:
-            self._selected = configured_providers(self._keys)
+            self._selected = configured_providers(self._keys, local=self._local, credentials=self._credentials,
+                                                  relay_token=self._relay_token, family=self._family)
         available = [(provider, self.key(provider)) for provider in self._selected]
         if not available:
             raise AIError("AI 服务未配置完成，暂时无法使用。其他学习功能仍可正常使用。")
@@ -360,7 +416,10 @@ class FreeChatTransport:
                     fallback=index + 1 < len(available), retry=len(configured) == 1 and provider == PRIMARY)
             except ProviderFailure as failure:
                 failures.append((provider, failure))
-                if failure.kind not in {"rate_limit", "overloaded", "timeout", "network", "server_error"}:
+                recoverable = {"rate_limit", "overloaded", "timeout", "network", "server_error"}
+                if self._local or shared_ai():
+                    recoverable.update({"auth", "account_limit", "access", "free_quota", "protocol", "empty"})
+                if failure.kind not in recoverable:
                     break
                 self._failed.add(provider.name)
                 continue
@@ -374,9 +433,12 @@ class FreeChatTransport:
                 raise ProviderFailure("timeout", "请求时间预算已耗尽。")
             started = self._clock()
             try:
-                # Fallback and retry share the original deadline, including backoff.
-                data = self._post(provider, key, payload, remaining * .6 if fallback else remaining)
-                result = completion_output(data)
+                timeout = remaining * .6 if fallback else remaining
+                if provider in RELAY_PROVIDERS.values():
+                    from .relay import infer
+                    result = infer(self._opener, provider, key, payload, timeout)
+                else:
+                    result = completion_output(self._post(provider, key, payload, timeout))
             except ProviderFailure as failure:
                 self._record(provider, started, failure.kind, failure.status, failed=True, code=failure.code)
                 if retry and not self._rate_retry_used and attempt == 0 and failure.code in {"1302", "1305"}:
@@ -397,11 +459,14 @@ class FreeChatTransport:
             raise ProviderFailure("request", "请求内容无法编码。") from None
         if len(body.encode("utf-8")) > MAX_REQUEST_BYTES:
             raise AIError("本次上下文过大，请清空对话或缩小查询范围。")
-        request = Request(provider_url(provider), data=body.encode("utf-8"), method="POST",
-                          headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
-                                   "Accept": "application/json"})
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        if provider != LOCAL_QWEN:
+            headers["Authorization"] = "Bearer " + key
+        opener = self._loopback_opener if provider == LOCAL_QWEN else self._opener
+        request = Request(provider_url(provider, self._credentials), data=body.encode("utf-8"),
+                          method="POST", headers=headers)
         try:
-            with self._opener.open(request, timeout=timeout) as response:
+            with opener.open(request, timeout=timeout) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
         except HTTPError as exc:
             status = exc.code

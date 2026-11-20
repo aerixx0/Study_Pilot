@@ -68,7 +68,7 @@ def mode_tools(mode):
     return TOOLS if allowed is None else [tool for tool in TOOLS if tool["name"] in allowed]
 
 
-def run_agent(auth, token, prompt, *, mode="chat", history=(), transport=None, on_tool=None, language="zh-CN"):
+def run_agent(auth, token, prompt, *, mode="chat", history=(), transport=None, on_tool=None, language="zh-CN", local=False):
     if language not in {"zh-CN", "en"}:
         raise ValidationError("对话语言不受支持。")
     language_note = ("Respond in English, including suggestion reasons and explanations. Preserve user text and canonical enum values when calling tools. All changes still require the user to confirm a proposal card."
@@ -90,7 +90,7 @@ def run_agent(auth, token, prompt, *, mode="chat", history=(), transport=None, o
     except UnicodeError:
         raise ValidationError("对话包含无效文字编码，请检查后重试。") from None
     if transport is None:
-        transport = FreeChatTransport()
+        transport = FreeChatTransport(local=local)
         transport.available()  # 未配置免费密钥时先失败，不消耗额度
     auth.ai_meter().reserve(token)
     tools = AgentTools(auth, token, uuid.uuid4().hex)
@@ -117,7 +117,7 @@ def run_agent(auth, token, prompt, *, mode="chat", history=(), transport=None, o
         # 只传流程数据；服务商、模型、地址和重试策略都由适配器决定，不接受调用方指定。
         response = transport.create({
             "instructions": INSTRUCTIONS.format(today=date.today().isoformat()) + "\n" + MODE_NOTES[mode] + "\n" + language_note,
-            "input": messages, "tools": declared, "max_output_tokens": 1800}, timeout=min(20, remaining))
+            "input": messages, "tools": declared, "max_output_tokens": 1800}, timeout=min(45 if local else 20, remaining))
         auth.study_database(token)
         if response.get("status") != "completed" or not isinstance(response.get("output"), list):
             raise AIError("模型未完成响应，已停止；下方已有提案尚未执行。")

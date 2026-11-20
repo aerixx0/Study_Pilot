@@ -12,11 +12,13 @@ from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
-from .agent import AIError, MODE_LABELS, MODES, run_agent
-from .ai import DEFAULT_MODEL, ai_configured, configured_providers, provider_status
+from .agent import AIError, MODE_LABELS, MODES, TOOLS, run_agent
+from .ai import DEFAULT_MODEL, RELAY_ORIGIN, SHARED_PROVIDERS, FreeChatTransport, ProviderFailure, ai_configured, configured_providers, provider_status, shared_ai
+from . import relay
 from .auth import AVATARS, AuthError
 from .database import ConfirmationRequired, ConflictError
 from .models import DAYS, DEVICES, LEVELS, PRIORITIES, SPEEDS, STATUSES, SUBJECTS, StudyProfile, TaskInput, ValidationError, iso_date
@@ -101,19 +103,39 @@ class PasswordChange(Confirm):
 class Chat(Body):
     language: Literal["zh-CN", "en"] = "zh-CN"
     prompt: str = Field(min_length=1, max_length=3000)
-    # 服务端固定使用免费模型；model 仅为兼容旧页面保留，不参与选择服务商。
+    # 只接受服务器已知的模型系列；旧客户端发送的模型名仍视为自动选择。
     model: str = Field(default=DEFAULT_MODEL, max_length=100)
     mode: str = Field(default="chat", max_length=20)
     history: list[dict] = Field(default_factory=list, max_length=12)
     consent: bool = False
 
 
+class RelayCode(Body):
+    code: str = Field(min_length=49, max_length=49)
+
+
+class ModelInput(Body):
+    instructions: str = Field(max_length=18000)
+    input: list[dict] = Field(min_length=1, max_length=40)
+    tools: list[dict] = Field(default_factory=list, max_length=len(TOOLS))
+    max_output_tokens: int = Field(ge=64, le=1800)
+
+
+class RelayRequest(Body):
+    family: Literal["qwen", "gpt-oss"]
+    payload: ModelInput
+
+
 def csrf(token):
     return hmac.new(token.encode(), b"StudyPilot web csrf v1", hashlib.sha256).hexdigest()
 
 
-def create_app(auth_factory=None):
+def create_app(auth_factory=None, *, desktop_handoff=None):
     app = FastAPI(title="StudyPilot", docs_url=None, redoc_url=None, openapi_url=None)
+    desktop = desktop_handoff is not None
+    session_cookie = "studypilot_desktop_session" if desktop else COOKIE
+    if desktop:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1"])
     cached_auth = None
 
     def store():
@@ -139,7 +161,9 @@ def create_app(auth_factory=None):
         if request.method not in {"GET", "HEAD", "OPTIONS"}:
             origin = request.headers.get("origin", "")
             parsed = urlsplit(origin)
-            if parsed.scheme not in {"http", "https"} or parsed.netloc != request.headers.get("host") or (os.getenv("VERCEL") and parsed.scheme != "https"):
+            machine_route = (not desktop and not origin and not request.cookies and request.method == "POST"
+                             and request.url.path in {"/api/desktop-ai/exchange", "/api/desktop-ai/infer"})
+            if not machine_route and (parsed.scheme not in {"http", "https"} or parsed.netloc != request.headers.get("host") or (os.getenv("VERCEL") and parsed.scheme != "https")):
                 return error_response(request, "请求来源无效，请从本站页面重新提交。", status_code=403)
             if "application/json" not in request.headers.get("content-type", "").lower():
                 return error_response(request, "请使用 JSON 请求。", status_code=415)
@@ -147,7 +171,7 @@ def create_app(auth_factory=None):
                 return error_response(request, "提交内容过大，请缩小范围。", status_code=413)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Referrer-Policy"] = "same-origin"
+        response.headers.setdefault("Referrer-Policy", "same-origin")
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
@@ -197,7 +221,7 @@ def create_app(auth_factory=None):
 
     def context(request: Request):
         auth = store()
-        token = request.cookies.get(COOKIE, "")
+        token = request.cookies.get(session_cookie, "")
         account = auth.authenticate(token)
         if account is None:
             raise AuthError("登录已失效，请重新登录。")
@@ -206,11 +230,21 @@ def create_app(auth_factory=None):
         return auth, token, account
 
     def identity(auth, token, account):
-        providers = configured_providers()
+        desktop_token = relay.local_token(account.id) if desktop and os.name == "nt" else None
+        providers = configured_providers(local=desktop, relay_token=desktop_token)
+        models = []
+        if desktop or shared_ai():
+            for family in SHARED_PROVIDERS:
+                choices = configured_providers(local=desktop, relay_token=desktop_token, family=family)
+                if choices:
+                    models.append(dict(id=family, label=choices[0].label))
         return dict(account=asdict(account), personal=auth.get_personal_profile(token), csrf=csrf(token),
-                    ai_configured=ai_configured(),
+                    ai_configured=os.getenv("STUDYPILOT_AI_ENABLED", "1") == "1" and bool(providers),
                     ai_providers=[p.label for p in providers],
-                    ai_setup=provider_status() if account.role == "developer" else None,
+                    ai_models=models, desktop=desktop, desktop_ai_linked=bool(desktop_token),
+                    desktop_ai_available=not desktop and shared_ai() and ai_configured(),
+                    desktop_ai_origin=RELAY_ORIGIN if desktop else None,
+                    ai_setup=provider_status(local=desktop) if account.role == "developer" else None,
                     default_model=providers[0].model if providers else DEFAULT_MODEL,
                     modes=dict(values=list(MODES), labels=MODE_LABELS),
                     today=date.today().isoformat(),
@@ -222,7 +256,7 @@ def create_app(auth_factory=None):
         return auth.study_database(token)
 
     def set_session(response, token):
-        response.set_cookie(COOKIE, token, httponly=True, secure=bool(os.getenv("VERCEL")), samesite="strict", path="/")
+        response.set_cookie(session_cookie, token, httponly=True, secure=bool(os.getenv("VERCEL")), samesite="strict", path="/")
 
     def matching(first, second):
         if first != second:
@@ -231,6 +265,30 @@ def create_app(auth_factory=None):
     @app.get("/")
     def index():
         return FileResponse(ROOT/"public"/"index.html")
+
+    if desktop:
+        @app.get("/desktop-login")
+        def desktop_login(ticket: str = ""):
+            original_session = desktop_handoff.redeem(ticket)
+            response = RedirectResponse("/conversation", status_code=303, headers={
+                "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
+            })
+            if original_session and store().authenticate(original_session):
+                set_session(response, original_session)
+            return response
+
+        @app.get("/conversation")
+        def conversation():
+            # Reuse the shipped HTML, stylesheet and scripts. A desktop-only
+            # boot script sets the first view and does not render any controls.
+            html = (ROOT / "public" / "index.html").read_text(encoding="utf-8")
+            html = html.replace("</head>", '  <script src="/desktop-entry.js" defer></script>\n</head>')
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+        @app.get("/desktop-entry.js")
+        def desktop_entry():
+            return Response('page = "assistant"; if (me && data) render();',
+                            media_type="text/javascript", headers={"Cache-Control": "no-store"})
 
     @app.get("/study.css")
     def css_file():
@@ -258,7 +316,7 @@ def create_app(auth_factory=None):
 
     @app.get("/api/health")
     def health():
-        return dict(ok=True, version="0.6.0", database_configured=bool(os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or (os.getenv("STUDYPILOT_WEB_LOCAL")=="1" and not os.getenv("VERCEL"))))
+        return dict(ok=True, version="0.6.0", database_configured=bool(desktop or os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or (os.getenv("STUDYPILOT_WEB_LOCAL")=="1" and not os.getenv("VERCEL"))))
 
     @app.post("/api/register")
     def register(body: Register):
@@ -286,7 +344,7 @@ def create_app(auth_factory=None):
         auth, token, _ = ctx
         auth.logout(token)
         response = JSONResponse({"ok": True})
-        response.delete_cookie(COOKIE, path="/")
+        response.delete_cookie(session_cookie, path="/")
         return response
 
     @app.get("/api/me")
@@ -383,7 +441,7 @@ def create_app(auth_factory=None):
         matching(body.new_password, body.password_again)
         code = ctx[0].change_password(ctx[1], body.current_password, body.new_password, confirmed=body.confirmed)
         response = JSONResponse({"recovery_code": code})
-        response.delete_cookie(COOKIE, path="/")
+        response.delete_cookie(session_cookie, path="/")
         return response
 
     @app.get("/api/sessions")
@@ -406,8 +464,67 @@ def create_app(auth_factory=None):
             raise ValidationError("请先同意将本次问题、对话上下文及相关学习资料发送至上述模型服务商。")
         if len(json.dumps(body.history, ensure_ascii=False)) > 20000:
             raise ValidationError("对话上下文过长，请清空后重试。")
-        result = run_agent(ctx[0], ctx[1], body.prompt, mode=body.mode, history=body.history, language=body.language)
+        options = {"local": True} if desktop else {}
+        family = body.model if body.model in SHARED_PROVIDERS and (desktop or shared_ai()) else None
+        token = relay.local_token(ctx[2].id) if desktop and os.name == "nt" else None
+        if token or family:
+            transport = FreeChatTransport(local=desktop, relay_token=token, family=family)
+            transport.available()
+            options["transport"] = transport
+        result = run_agent(ctx[0], ctx[1], body.prompt, mode=body.mode, history=body.history,
+                           language=body.language, **options)
         return asdict(result)
+
+    if desktop:
+        @app.post("/api/desktop-ai/connect")
+        def desktop_connect(body: RelayCode, ctx=Depends(context)):
+            try:
+                relay.connect(ctx[2].id, body.code)
+            except ProviderFailure as exc:
+                if exc.kind == "auth":
+                    raise ValidationError("连接码无效或已过期，请在网页版重新生成。") from None
+                raise AIError("暂时无法连接网页版 AI，请稍后重试。") from None
+            return identity(*ctx)
+
+        @app.post("/api/desktop-ai/disconnect")
+        def desktop_disconnect(ctx=Depends(context)):
+            relay.disconnect(ctx[2].id)
+            return identity(*ctx)
+    else:
+        def require_shared_ai():
+            if not shared_ai() or not ai_configured():
+                raise HTTPException(503, "云端 AI 尚未开放。")
+
+        @app.post("/api/desktop-ai/issue")
+        def desktop_issue(ctx=Depends(context)):
+            require_shared_ai()
+            return dict(code=relay.issue(ctx[0], ctx[1]))
+
+        @app.post("/api/desktop-ai/revoke")
+        def desktop_revoke(body: Confirm, ctx=Depends(context)):
+            if not body.confirmed:
+                raise ValidationError("请确认撤销桌面授权。")
+            relay.revoke(ctx[0], ctx[1])
+            return dict(ok=True)
+
+        @app.post("/api/desktop-ai/exchange")
+        def desktop_exchange(body: RelayCode):
+            require_shared_ai()
+            return dict(token=relay.exchange(store(), body.code))
+
+        @app.post("/api/desktop-ai/infer")
+        def desktop_infer(body: RelayRequest, request: Request):
+            require_shared_ai()
+            scheme, _, token = request.headers.get("authorization", "").partition(" ")
+            if scheme.lower() != "bearer":
+                raise HTTPException(401, "需要有效的桌面 AI 授权。")
+            transport = FreeChatTransport(family=body.family)
+            transport.available()
+            store().ai_meter().reserve(token, desktop_relay=True)
+            payload = body.payload.model_dump()
+            tool_names = {tool["name"] for tool in body.payload.tools if isinstance(tool.get("name"), str)}
+            payload["tools"] = [tool for tool in TOOLS if tool["name"] in tool_names]
+            return transport.create(payload, timeout=28)
 
     @app.post("/api/proposals/{proposal_id}/execute")
     def execute(proposal_id: str, body: Confirm, ctx=Depends(context)):
